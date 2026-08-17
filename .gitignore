@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+collector/venv/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Local datasets and generated samples
+data/
+dataset/
+UI-PRMD/
+collector/dataset/
+collector/RehabExerAssess-main/data/
+collector/RehabExerAssess-main/data_old
+
+# Model artifacts and training outputs
+collector/models/
+*.pt
+*.pth
+*.onnx
+logs/
+collector/RehabExerAssess-main/logs/
+
+# Generated media / diagnostics
+*.avi
+*.mp4
+*.mov
+*.jpg
+*.jpeg
+*.png
+!collector/RehabExerAssess-main/figures/*.png
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# External/reference projects
+collector/RehabExerAssess-main/
