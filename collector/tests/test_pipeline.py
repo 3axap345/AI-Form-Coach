@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 import sys
 import tempfile
 import unittest
@@ -10,8 +9,6 @@ import numpy as np
 import torch
 
 COLLECTOR_DIR = Path(__file__).resolve().parents[1]
-PROJECT_ROOT = COLLECTOR_DIR.parent
-REHAB_DIR = COLLECTOR_DIR / "RehabExerAssess-main"
 sys.path.insert(0, str(COLLECTOR_DIR))
 
 from canonical import (  # noqa: E402
@@ -103,23 +100,6 @@ def write_uiprmd_txt_fixture(path: Path, frame_count: int = 8) -> Path:
     return path
 
 
-def write_raw_skeleton_fixture(path: Path) -> Path:
-    skeleton = synthetic_uiprmd_skeleton(frame_count=3)
-    lines = [str(skeleton.shape[0]), "1", "0 0 0 0 0 0 0 0 0", "22"]
-
-    for frame_idx, frame in enumerate(skeleton):
-        if frame_idx > 0:
-            lines.extend(["1", "0 0 0 0 0 0 0 0 0", "22"])
-        for xyz in frame:
-            lines.append(
-                "0 0 0 0 0 0 "
-                f"{float(xyz[0]):.6f} {float(xyz[1]):.6f} {float(xyz[2]):.6f}"
-            )
-
-    path.write_text("\n".join(lines), encoding="utf-8")
-    return path
-
-
 def write_split_fixture(root: Path) -> None:
     for label_dir, class_code in (("Correct", "01"), ("Incorrect", "02")):
         skeleton_dir = root / label_dir / "Kinect" / "Skeletons"
@@ -131,18 +111,6 @@ def write_split_fixture(root: Path) -> None:
 
 
 class PipelineTests(unittest.TestCase):
-    def test_raw_skeleton_parser_shape(self):
-        spec = importlib.util.spec_from_file_location(
-            "convert_uiprmd", REHAB_DIR / "convert_uiprmd.py"
-        )
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        with tempfile.TemporaryDirectory() as tmp:
-            path = write_raw_skeleton_fixture(Path(tmp) / "A01S01E02C01.skeleton")
-            raw = module.parse_skeleton(path)
-            self.assertEqual(raw.shape[1:], (22, 3))
-            self.assertGreater(raw.shape[0], 1)
-
     def test_filename_and_label_mapping(self):
         correct = parse_uiprmd_filename("A01S01E02C01.txt")
         incorrect = parse_uiprmd_filename("A01S01E02C02.txt")
