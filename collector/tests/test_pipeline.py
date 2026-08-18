@@ -36,18 +36,7 @@ from uiprmd_adapter import (  # noqa: E402
 )
 
 
-TXT_SAMPLE = (
-    COLLECTOR_DIR
-    / "RehabExerAssess-main"
-    / "data"
-    / "UI-PRMD"
-    / "Correct"
-    / "Kinect"
-    / "Skeletons"
-    / "A01S01E02C01.txt"
-)
-RAW_SAMPLE = PROJECT_ROOT / "UI-PRMD" / "skl_whole" / "A01S01E02C01.skeleton"
-UIPRMD_ROOT = COLLECTOR_DIR / "RehabExerAssess-main" / "data" / "UI-PRMD"
+TXT_SAMPLE_NAME = "A01S01E02C01.txt"
 
 
 def synthetic_squat_sample() -> np.ndarray:
@@ -81,6 +70,66 @@ def synthetic_squat_sample() -> np.ndarray:
     return sample
 
 
+def synthetic_uiprmd_skeleton(frame_count: int = 8) -> np.ndarray:
+    skeleton = np.zeros((frame_count, 22, 3), dtype=np.float32)
+    coords = {
+        6: (0.30, 140.0, -230.0),
+        10: (-0.30, 140.0, -230.0),
+        14: (0.30, 90.0, -230.0),
+        18: (-0.30, 90.0, -230.0),
+        15: (0.38, 50.0, -230.0),
+        19: (-0.38, 50.0, -230.0),
+        16: (0.44, 10.0, -230.0),
+        20: (-0.44, 10.0, -230.0),
+        17: (0.48, 5.0, -229.0),
+        21: (-0.48, 5.0, -231.0),
+    }
+
+    for joint_idx, xyz in coords.items():
+        skeleton[:, joint_idx, :] = xyz
+
+    for i in range(frame_count):
+        squat_phase = np.sin(np.pi * i / max(frame_count - 1, 1))
+        skeleton[i, [14, 18], 1] -= 15.0 * squat_phase
+        skeleton[i, [6, 10], 1] -= 15.0 * squat_phase
+
+    return skeleton
+
+
+def write_uiprmd_txt_fixture(path: Path, frame_count: int = 8) -> Path:
+    skeleton = synthetic_uiprmd_skeleton(frame_count)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savetxt(path, skeleton.reshape(frame_count, -1), fmt="%.6f")
+    return path
+
+
+def write_raw_skeleton_fixture(path: Path) -> Path:
+    skeleton = synthetic_uiprmd_skeleton(frame_count=3)
+    lines = [str(skeleton.shape[0]), "1", "0 0 0 0 0 0 0 0 0", "22"]
+
+    for frame_idx, frame in enumerate(skeleton):
+        if frame_idx > 0:
+            lines.extend(["1", "0 0 0 0 0 0 0 0 0", "22"])
+        for xyz in frame:
+            lines.append(
+                "0 0 0 0 0 0 "
+                f"{float(xyz[0]):.6f} {float(xyz[1]):.6f} {float(xyz[2]):.6f}"
+            )
+
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return path
+
+
+def write_split_fixture(root: Path) -> None:
+    for label_dir, class_code in (("Correct", "01"), ("Incorrect", "02")):
+        skeleton_dir = root / label_dir / "Kinect" / "Skeletons"
+        skeleton_dir.mkdir(parents=True, exist_ok=True)
+        for subject in ("01", "02", "08"):
+            for episode in ("01", "02"):
+                path = skeleton_dir / f"A01S{subject}E{episode}C{class_code}.txt"
+                path.write_text("", encoding="utf-8")
+
+
 class PipelineTests(unittest.TestCase):
     def test_raw_skeleton_parser_shape(self):
         spec = importlib.util.spec_from_file_location(
@@ -88,9 +137,11 @@ class PipelineTests(unittest.TestCase):
         )
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        raw = module.parse_skeleton(RAW_SAMPLE)
-        self.assertEqual(raw.shape[1:], (22, 3))
-        self.assertGreater(raw.shape[0], 1)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_raw_skeleton_fixture(Path(tmp) / "A01S01E02C01.skeleton")
+            raw = module.parse_skeleton(path)
+            self.assertEqual(raw.shape[1:], (22, 3))
+            self.assertGreater(raw.shape[0], 1)
 
     def test_filename_and_label_mapping(self):
         correct = parse_uiprmd_filename("A01S01E02C01.txt")
@@ -102,42 +153,55 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(incorrect.label, Label.INCORRECT.value)
 
     def test_uiprmd_mapping_and_y_conversion(self):
-        raw = load_uiprmd_skeleton_txt(TXT_SAMPLE)
-        frames = load_uiprmd_skeleton(TXT_SAMPLE)
-        self.assertEqual(raw.shape[1:], (22, 3))
-        self.assertEqual(frames.shape[1:], (12, 4))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_uiprmd_txt_fixture(Path(tmp) / TXT_SAMPLE_NAME)
+            raw = load_uiprmd_skeleton_txt(path)
+            frames = load_uiprmd_skeleton(path)
+            self.assertEqual(raw.shape[1:], (22, 3))
+            self.assertEqual(frames.shape[1:], (12, 4))
 
-        raw_left_shoulder_y = raw[0, 6, 1]
-        canonical_left_shoulder_y = frames[0, JOINT_INDEX["left_shoulder"], COORD_Y]
-        self.assertAlmostEqual(canonical_left_shoulder_y, -raw_left_shoulder_y, places=4)
+            raw_left_shoulder_y = raw[0, 6, 1]
+            canonical_left_shoulder_y = frames[0, JOINT_INDEX["left_shoulder"], COORD_Y]
+            self.assertAlmostEqual(
+                canonical_left_shoulder_y,
+                -raw_left_shoulder_y,
+                places=4,
+            )
 
     def test_preprocessing_shape_orientation_and_z(self):
-        sample = process_file(TXT_SAMPLE, Config())
-        self.assertEqual(sample.shape, canonical_shape())
-        self.assertEqual(sample.dtype, np.float32)
-        assert_canonical_orientation(sample)
-        self.assertLess(abs(float(sample[:, :, COORD_Z].mean())), 2.0)
-        self.assertLess(float(np.max(np.abs(sample[:, :, COORD_Z]))), 3.0)
-        self.assertTrue(np.all(sample[:, :, 3] == 1.0))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_uiprmd_txt_fixture(Path(tmp) / TXT_SAMPLE_NAME)
+            sample = process_file(path, Config())
+            self.assertEqual(sample.shape, canonical_shape())
+            self.assertEqual(sample.dtype, np.float32)
+            assert_canonical_orientation(sample)
+            self.assertLess(abs(float(sample[:, :, COORD_Z].mean())), 2.0)
+            self.assertLess(float(np.max(np.abs(sample[:, :, COORD_Z]))), 3.0)
+            self.assertTrue(np.all(sample[:, :, 3] == 1.0))
 
     def test_upside_down_detection(self):
-        sample = process_file(TXT_SAMPLE, Config())
-        upside_down = sample.copy()
-        upside_down[:, :, COORD_Y] *= -1.0
-        with self.assertRaises(ValueError):
-            assert_canonical_orientation(upside_down)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_uiprmd_txt_fixture(Path(tmp) / TXT_SAMPLE_NAME)
+            sample = process_file(path, Config())
+            upside_down = sample.copy()
+            upside_down[:, :, COORD_Y] *= -1.0
+            with self.assertRaises(ValueError):
+                assert_canonical_orientation(upside_down)
 
     def test_subject_safe_split(self):
-        records = discover_uiprmd_txt(UIPRMD_ROOT)
-        split = subject_safe_split(records, test_subjects=("08", "09", "10"))
-        train_subjects = {row["subject"] for row in split["train"]}
-        test_subjects = {row["subject"] for row in split["test"]}
-        self.assertFalse(train_subjects.intersection(test_subjects))
-        stats = split_stats(split)
-        self.assertEqual(stats["train"]["total"], 126)
-        self.assertEqual(stats["test"]["total"], 54)
-        self.assertEqual(stats["train"]["labels"], {"incorrect": 63, "correct": 63})
-        self.assertEqual(stats["test"]["labels"], {"incorrect": 27, "correct": 27})
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "UI-PRMD"
+            write_split_fixture(root)
+            records = discover_uiprmd_txt(root)
+            split = subject_safe_split(records, test_subjects=("08",))
+            train_subjects = {row["subject"] for row in split["train"]}
+            test_subjects = {row["subject"] for row in split["test"]}
+            self.assertFalse(train_subjects.intersection(test_subjects))
+            stats = split_stats(split)
+            self.assertEqual(stats["train"]["total"], 8)
+            self.assertEqual(stats["test"]["total"], 4)
+            self.assertEqual(stats["train"]["labels"], {"incorrect": 4, "correct": 4})
+            self.assertEqual(stats["test"]["labels"], {"incorrect": 2, "correct": 2})
 
     def test_model_input_shape(self):
         model = FormClassifier()
@@ -157,7 +221,8 @@ class PipelineTests(unittest.TestCase):
                 path,
             )
             inference = FormClassifierInference(path, device="cpu")
-            sample = process_file(TXT_SAMPLE, Config())
+            sample_path = write_uiprmd_txt_fixture(Path(tmp) / TXT_SAMPLE_NAME)
+            sample = process_file(sample_path, Config())
             result = inference.predict(sample)
             self.assertIn(result["label"], {"incorrect", "correct"})
             self.assertIn("confidence", result)
