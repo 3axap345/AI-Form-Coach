@@ -13,29 +13,27 @@ The project currently focuses on:
 
 > This project provides coaching heuristics and ML prototype feedback. It is not a medical diagnostic tool.
 
-## Development History
+## AI-Assisted Development Workflow
 
-### Initial collector work by Claude
+This project was developed with an AI-assisted workflow. Architecture, product direction, technical decisions, and integration choices were guided and reviewed by the project owner, while AI coding assistants were used to accelerate routine implementation, debugging, research, and documentation tasks.
 
-Claude designed and implemented the first live data collector for squat dataset capture:
+Claude was used during the initial collector phase to speed up implementation of the live squat data capture prototype:
 
-- created the core modules `config.py`, `camera.py`, `pose.py`, `landmarks.py`, `repetition.py`, `preprocessing.py`, `quality.py`, `storage.py`, `ui.py`, and `main.py`;
-- added webcam capture, MediaPipe Pose processing, selected squat landmarks, repetition detection via knee-angle state machine, resampling to 60 frames, pelvis-centered normalization, quality checks, async `.npy` + `.json` saving, and undo for the last sample;
-- helped debug local setup issues around Python 3.14 incompatibility with MediaPipe, moving to Python 3.11 + venv, and path issues affecting MediaPipe model assets;
-- researched external rehabilitation / exercise datasets and investigated UI-PRMD availability and alternatives.
+- scaffolded the core collector modules `config.py`, `camera.py`, `pose.py`, `landmarks.py`, `repetition.py`, `preprocessing.py`, `quality.py`, `storage.py`, `ui.py`, and `main.py`;
+- assisted with webcam capture, MediaPipe Pose processing, selected squat landmarks, knee-angle repetition detection, 60-frame resampling, pelvis-centered normalization, quality checks, async `.npy` + `.json` saving, and undo support;
+- helped investigate local setup issues around Python 3.14 incompatibility with MediaPipe, moving to Python 3.11 + venv, and path issues affecting MediaPipe model assets;
+- supported research into rehabilitation / exercise datasets, UI-PRMD availability, and dataset alternatives.
 
-### Follow-up integration work by Codex
+Codex was used in the follow-up integration phase to help turn the prototype into a more cohesive training/inference project:
 
-Codex continued from that baseline and prepared the project for a unified training/inference pipeline:
-
-- audited the existing collector, UI-PRMD conversion, RehabExerAssess reference code, preprocessing, repetition detection, and model code;
-- defined a canonical skeleton contract `[60, 12, 4]` in `collector/canonical.py`;
-- fixed UI-PRMD coordinate conversion into the live MediaPipe-compatible convention, including Y-down semantics and normalized body-relative Z;
+- audited the collector, UI-PRMD conversion path, RehabExerAssess reference code, preprocessing, repetition detection, and model pipeline;
+- helped define the canonical skeleton contract `[60, 12, 4]` in `collector/canonical.py`;
+- corrected UI-PRMD coordinate conversion into the live MediaPipe-compatible convention, including Y-down semantics and normalized body-relative Z;
 - added subject-safe UI-PRMD splitting, centralized label conventions, and regression tests;
-- added a lightweight 12-joint binary form classifier, training script, saved-model inference wrapper, and live collector inference integration;
+- implemented a lightweight 12-joint binary form classifier, training script, saved-model inference wrapper, and live collector inference integration;
 - added rule-based squat issue analysis on top of binary inference;
 - redesigned the OpenCV HUD into a cleaner panel focused on status, repetitions, and last prediction;
-- prepared GitHub metadata such as this README, `.gitignore`, and CI.
+- prepared GitHub project metadata such as this README, `.gitignore`, and CI.
 
 ## Repository Layout
 
