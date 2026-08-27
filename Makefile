@@ -3,7 +3,7 @@ PYTHON ?= python
 .PHONY: setup test lint coverage typecheck build format clean lock
 
 setup:
-	$(PYTHON) -m pip install --require-hashes -r requirements-dev.txt
+	$(PYTHON) -m pip install --require-hashes --only-binary=:all -r requirements-dev.txt
 
 test:
 	$(PYTHON) -m unittest discover -s collector/tests -v
