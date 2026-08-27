@@ -80,7 +80,9 @@ class Config:
     # --- Model inference ---
     enable_form_inference: bool = True
     form_model_path: str = "models/squat_binary/best_model.pt"
-    form_model_sha256: str | None = None  # optional expected hash for a deployed model
+    # Required before a local model artifact is accepted for inference.  None is
+    # valid only when no model bundle is provisioned and inference stays disabled.
+    form_model_sha256: str | None = None
 
     # --- Rule-based form analysis ---
     form_analysis_bottom_window: int = 9

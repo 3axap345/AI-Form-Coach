@@ -66,8 +66,12 @@ another supported pose backend.
 
 Training writes `best_model.pt` as a weights-only `state_dict`; metadata is in
 `model_metadata.json`. Inference uses `weights_only=True`, checks the exact key
-set, and calls `strict=True`; it has no unsafe-pickle fallback. Set
-`Config.form_model_sha256` to a 64-character checksum to verify deployed weights.
+set, and calls `strict=True`; it has no unsafe-pickle fallback. A model cannot be
+loaded without a 64-character `Config.form_model_sha256`: obtain the checksum from
+the reviewed model-release record, not from the model bundle being verified. On
+Windows, the release owner can calculate it with
+`(Get-FileHash best_model.pt -Algorithm SHA256).Hash`. If no trusted checksum is
+provisioned, live collection continues with inference disabled.
 
 Models, generated samples, and datasets are excluded from Git. The current release
 artefact is a deterministic, Git-tracked source bundle plus a separately provisioned
@@ -143,14 +147,19 @@ workflow and has been removed; no application or test dependency on `aeon` remai
 
 ## CI and merge policy
 
-The single workflow has separate `lint`, `tests`, `coverage`, `typecheck`, and
-`build` jobs. The first four install only `requirements-dev.txt` using
+The primary `Tests` workflow has separate `lint`, `tests`, `coverage`, `typecheck`,
+and `build` jobs. The first four install only `requirements-dev.txt` using
 `--require-hashes --only-binary=:all`; no CI step installs an unpinned package or
 builds an unpinned source distribution. Coverage excludes test files, reports
 missing lines, and fails below the current production baseline of 63%. `build`
 creates and uploads the source bundle. The Windows workflow invokes the same Python
 commands directly because GNU Make is not a guaranteed runner dependency. Errors are
 not suppressed.
+
+The separate **Dependency audit** workflow audits the committed hash lock with OSV
+every week and can be started manually before merging dependency or security
+configuration changes. Its required update/quarantine process is documented in
+[Dependency update policy](docs/dependency-update-policy.md).
 
 The active `Protect main` ruleset targets `main`, requires `lint`, `tests`,
 `coverage`, `typecheck`, and `build`, and blocks deletion and force-pushes. It does

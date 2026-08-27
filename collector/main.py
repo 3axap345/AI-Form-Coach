@@ -70,7 +70,12 @@ def main() -> None:
         model_path = Path(cfg.form_model_path)
         if not model_path.is_absolute():
             model_path = Path(__file__).resolve().parent / model_path
-        if model_path.exists():
+        if model_path.exists() and cfg.form_model_sha256 is None:
+            logger.error(
+                "Form classifier disabled: Config.form_model_sha256 is required for %s",
+                model_path,
+            )
+        elif model_path.exists():
             try:
                 from form_inference import FormClassifierInference
 

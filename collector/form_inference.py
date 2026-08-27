@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import pickle
 from pathlib import Path
-from typing import Mapping, Optional
+from typing import Mapping
 
 import numpy as np
 import torch
@@ -43,24 +43,25 @@ class FormClassifierInference:
     def __init__(
         self,
         model_path: Path,
-        device: Optional[str] = None,
-        expected_sha256: Optional[str] = None,
+        device: str | None = None,
+        expected_sha256: str | None = None,
     ):
         self.model_path = Path(model_path)
         self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
         if not self.model_path.is_file():
             raise ModelLoadError(f"model file does not exist: {self.model_path}")
-        if expected_sha256 is not None:
-            expected_sha256 = expected_sha256.lower()
-            if len(expected_sha256) != 64 or any(
-                char not in "0123456789abcdef" for char in expected_sha256
-            ):
-                raise ModelLoadError("configured model SHA-256 must be 64 hexadecimal characters")
-            actual_sha256 = sha256_file(self.model_path)
-            if actual_sha256 != expected_sha256:
-                raise ModelLoadError(
-                    f"model SHA-256 mismatch: expected {expected_sha256}, got {actual_sha256}"
-                )
+        if expected_sha256 is None:
+            raise ModelLoadError("an expected model SHA-256 is required before loading weights")
+        expected_sha256 = expected_sha256.lower()
+        if len(expected_sha256) != 64 or any(
+            char not in "0123456789abcdef" for char in expected_sha256
+        ):
+            raise ModelLoadError("configured model SHA-256 must be 64 hexadecimal characters")
+        actual_sha256 = sha256_file(self.model_path)
+        if actual_sha256 != expected_sha256:
+            raise ModelLoadError(
+                f"model SHA-256 mismatch: expected {expected_sha256}, got {actual_sha256}"
+            )
 
         self.model = FormClassifier().to(self.device)
         try:
