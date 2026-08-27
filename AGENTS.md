@@ -48,6 +48,10 @@ make format
 - Do not commit `.env` files, local models, cached artefacts, or the external
   `collector/RehabExerAssess-main/` checkout.
 - Never use unsafe pickle/model loading; inference must remain weights-only.
+- Treat a model SHA-256 as a required deployment trust anchor: never load a
+  provisioned model without its independently reviewed checksum.
+- For dependency changes, follow `docs/dependency-update-policy.md`; regenerate
+  locks, retain hashes, and run the manual Dependency audit workflow before merge.
 - Do not alter medical/non-medical claims, coaching-rule intent, or clinical wording
   without explicit project-owner approval and an update to `docs/form-analysis-intent.md`.
 - Document every new configuration parameter, including units and tuning effect.
