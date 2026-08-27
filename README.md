@@ -44,6 +44,11 @@ make clean    # caches only
 See [CONTRIBUTING.md](CONTRIBUTING.md) for pull-request expectations and
 [SECURITY.md](SECURITY.md) for private vulnerability reporting.
 
+## License
+
+The source code is available under the [MIT License](LICENSE). Dataset and model
+artifacts remain external inputs and may have separate licence or access terms.
+
 `requirements.in` is the runtime source; `requirements-dev.in` adds tooling
 (`pip-tools`, Ruff, coverage, and mypy).
 Their `.txt` counterparts are generated exact-version SHA-256 locks. CI installs
