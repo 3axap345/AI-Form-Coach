@@ -1,6 +1,9 @@
 PYTHON ?= python
 
-.PHONY: setup test lint coverage typecheck build format clean lock
+.PHONY: help setup test lint coverage typecheck build format clean lock
+
+help:
+	@$(PYTHON) -c "print('Available targets: setup, test, lint, format, clean, coverage, typecheck, build, lock')"
 
 setup:
 	$(PYTHON) -m pip install --require-hashes --only-binary=:all -r requirements-dev.txt

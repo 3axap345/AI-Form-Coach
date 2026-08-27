@@ -30,6 +30,7 @@ calibration TODOs for form-analysis and quality thresholds are in
 ## Development and dependencies
 
 ```bash
+make help     # list supported maintenance targets
 make setup    # hash-locked development dependencies
 make lint     # Ruff lint + format check
 make test     # full unittest suite
@@ -147,7 +148,9 @@ The single workflow has separate `lint`, `tests`, `coverage`, `typecheck`, and
 `--require-hashes --only-binary=:all`; no CI step installs an unpinned package or
 builds an unpinned source distribution. Coverage excludes test files, reports
 missing lines, and fails below the current production baseline of 63%. `build`
-creates and uploads the source bundle. Errors are not suppressed.
+creates and uploads the source bundle. The Windows workflow invokes the same Python
+commands directly because GNU Make is not a guaranteed runner dependency. Errors are
+not suppressed.
 
 The active `Protect main` ruleset targets `main`, requires `lint`, `tests`,
 `coverage`, `typecheck`, and `build`, and blocks deletion and force-pushes. It does

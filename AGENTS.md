@@ -31,6 +31,7 @@ validated runtime thresholds; do not create a parallel landmark representation.
 ## Commands
 
 ```bash
+make help
 make setup
 make lint
 make test
