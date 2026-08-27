@@ -1,191 +1,127 @@
 # AI Form Coach
 
-AI Form Coach is a Python/OpenCV + MediaPipe prototype for collecting squat repetitions, preprocessing pose landmarks into a canonical skeleton format, running a binary form classifier, and displaying feedback in a live camera HUD.
+Python 3.11 prototype for camera-based squat collection: MediaPipe pose extraction,
+repetition detection, quality validation, form feedback, and canonical sample storage.
+It is not a medical diagnostic tool.
 
-The project currently focuses on:
-
-- live MediaPipe pose collection;
-- automatic squat repetition detection;
-- canonical skeleton samples shaped `[60, 12, 4]`;
-- binary `correct` / `incorrect` squat classification;
-- lightweight rule-based form diagnostics;
-- UI-PRMD conversion utilities for offline training.
-
-> This project provides coaching heuristics and ML prototype feedback. It is not a medical diagnostic tool.
-
-## AI-Assisted Development Workflow
-
-This project was developed with an AI-assisted workflow. Architecture, product direction, technical decisions, and integration choices were guided and reviewed by the project owner, while AI coding assistants were used to accelerate routine implementation, debugging, research, and documentation tasks.
-
-Claude was used during the initial collector phase to speed up implementation of the live squat data capture prototype:
-
-- scaffolded the core collector modules `config.py`, `camera.py`, `pose.py`, `landmarks.py`, `repetition.py`, `preprocessing.py`, `quality.py`, `storage.py`, `ui.py`, and `main.py`;
-- assisted with webcam capture, MediaPipe Pose processing, selected squat landmarks, knee-angle repetition detection, 60-frame resampling, pelvis-centered normalization, quality checks, async `.npy` + `.json` saving, and undo support;
-- helped investigate local setup issues around Python 3.14 incompatibility with MediaPipe, moving to Python 3.11 + venv, and path issues affecting MediaPipe model assets;
-- supported research into rehabilitation / exercise datasets, UI-PRMD availability, and dataset alternatives.
-
-Codex was used in the follow-up integration phase to help turn the prototype into a more cohesive training/inference project:
-
-- audited the collector, UI-PRMD conversion path, RehabExerAssess reference code, preprocessing, repetition detection, and model pipeline;
-- helped define the canonical skeleton contract `[60, 12, 4]` in `collector/canonical.py`;
-- corrected UI-PRMD coordinate conversion into the live MediaPipe-compatible convention, including Y-down semantics and normalized body-relative Z;
-- added subject-safe UI-PRMD splitting, centralized label conventions, and regression tests;
-- implemented a lightweight 12-joint binary form classifier, training script, saved-model inference wrapper, and live collector inference integration;
-- added rule-based squat issue analysis on top of binary inference;
-- redesigned the OpenCV HUD into a cleaner panel focused on status, repetitions, and last prediction;
-- prepared GitHub project metadata such as this README, `.gitignore`, and CI.
-
-## Repository Layout
-
-```text
-collector/
-  main.py                    # Live camera app
-  camera.py                  # OpenCV camera wrapper
-  pose.py                    # MediaPipe Pose wrapper
-  repetition.py              # Squat repetition state machine
-  preprocessing.py           # Resampling + canonical normalization
-  canonical.py               # Single source of truth for joints/channels/labels
-  form_inference.py          # Model inference wrapper
-  form_analysis.py           # Rule-based form issue diagnostics
-  form_model.py              # 12-joint binary classifier
-  train_form_classifier.py   # Offline UI-PRMD training pipeline
-  uiprmd_adapter.py          # UI-PRMD -> canonical skeleton converter
-  tests/                     # Regression tests
-  RehabExerAssess-main/      # Reference research code used during development
-```
-
-Large local folders such as `UI-PRMD/`, generated datasets, virtual environments, and trained checkpoints are intentionally ignored by Git.
-
-## Canonical Skeleton Format
-
-The application uses one canonical representation:
-
-```text
-[T=60, V=12, C=4]
-```
-
-Joints:
-
-```text
-left_shoulder, right_shoulder,
-left_hip, right_hip,
-left_knee, right_knee,
-left_ankle, right_ankle,
-left_heel, right_heel,
-left_foot_index, right_foot_index
-```
-
-Channels:
-
-```text
-x, y, z, visibility
-```
-
-Coordinates are body-centered and normalized. `y` follows image-space direction: positive downward. `z` is mid-hip-relative and normalized by torso scale.
-
-## Setup
-
-Use Python 3.11 on Windows.
+## Quick start
 
 ```powershell
-cd path\to\fintes_AI
-python -m venv collector\venv
-.\collector\venv\Scripts\python.exe -m pip install --upgrade pip
-.\collector\venv\Scripts\python.exe -m pip install -r .\collector\requirements.txt
+git clone <repository-url>
+cd fintes_AI
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+make setup
+make test
+python .\collector\main.py
 ```
 
-If you already have `collector\venv`, use that interpreter for all commands:
+The live app needs a local camera. Use `1`–`6` to choose a class, `SPACE` to
+record, `Z` to undo, `R` to reset counters, and `Q`/`ESC` to quit.
 
-```powershell
-.\collector\venv\Scripts\python.exe ...
+## Development and dependencies
+
+```bash
+make setup    # hash-locked development dependencies
+make lint     # Ruff lint + format check
+make test     # full unittest suite
+make format   # apply Ruff fixes/formatting
+make clean    # caches only
 ```
 
-## Run Live Collector
+`requirements.in` is the runtime source; `requirements-dev.in` adds tooling.
+Their `.txt` counterparts are generated exact-version SHA-256 locks. CI installs
+`requirements-dev.txt` with `--require-hashes`. Edit `.in`, then run `make lock`;
+never hand-edit a generated lock. `Makefile` honours `PYTHON`, e.g.
+`make PYTHON=.venv/Scripts/python.exe test`.
 
-```powershell
-cd path\to\fintes_AI
-.\collector\venv\Scripts\python.exe .\collector\main.py
-```
+MediaPipe is pinned to `0.10.14`, whose requirement is `protobuf>=4.25.3,<5`.
+The explicit `protobuf==4.25.9` remains compatible and is newer than the
+`<4.25.8` range affected by CVE-2025-4565.
 
-Controls:
+## Model safety
+
+Training writes `best_model.pt` as a weights-only `state_dict`; metadata is in
+`model_metadata.json`. Inference uses `weights_only=True`, checks the exact key
+set, and calls `strict=True`; it has no unsafe-pickle fallback. Set
+`Config.form_model_sha256` to a 64-character checksum to verify deployed weights.
+
+Models, generated samples, and datasets are excluded from Git. The current release
+artefact is source application plus a separately provisioned model bundle. A
+packaged/Docker release pipeline is intentionally a roadmap TODO.
+
+## Configuration thresholds
+
+Defaults are in `collector/config.py`. Ranges labelled implementation-only are
+not clinical recommendations; calibrate them with recorded target-camera data.
+
+| Parameter | Default, units, tuning |
+| --- | --- |
+| `standing_knee_angle` | `160°`, geometry 0–180. Higher requires straighter standing; lower accepts bend. Adjust for camera/subject bias. |
+| `bottom_knee_angle` | `100°`, 0–180. Higher recognizes shallower bottoms; lower needs deeper flexion. Use labelled captures. |
+| `hysteresis` | `8°`, non-negative. Higher filters noise but delays phases; lower is faster but can chatter. |
+| `standing_confirm_frames` | `5` frames, positive integer. Higher rejects accidental starts but adds latency; lower starts sooner. Tune for FPS/noise. |
+| `min_rep_duration_sec` | `0.4 s`. Higher rejects fast movements; lower admits more false triggers. |
+| `max_rep_tracking_duration_sec` | `5.0 s`. FSM timeout only: higher keeps stalled tracking; lower resets earlier. |
+| `max_saved_rep_duration_sec` | `5.0 s`. Quality gate only: higher saves slower reps; lower rejects them. |
+| `smoothing_window` | `5` frames. Higher removes jitter but delays phases; lower responds sooner. |
+| `min_avg_visibility` / `min_keypoint_visibility` | `0.6` / `0.4`, 0–1. Higher requires clearer poses; lower tolerates occlusion. |
+| `max_missing_frame_ratio` | `0.15`, 0–1. Higher tolerates tracking loss; lower protects continuity. |
+| `min_bbox_area_ratio` / `max_bbox_area_ratio` | `0.05` / `0.85`, area share 0–1. Raise min for a nearer subject; lower max for more framing room. |
+| `form_analysis_bottom_window` / `form_analysis_smoothing_window` | `9` / `5` frames. Higher smooths diagnostics; lower is more local/noise-sensitive. |
+| `form_analysis_min_visibility` | `0.4`, 0–1. Higher produces fewer, safer diagnostics. |
+| `shallow_depth_knee_angle` | `115°`, 0–180. Higher flags more squats as shallow; lower flags only very shallow reps. |
+| `excessive_forward_lean_angle` | `28°`, 0–90. Higher is more permissive; lower flags smaller leans. |
+| `knee_valgus_ratio_drop` / `heel_instability_threshold` | `0.18` / `0.12`, non-negative implementation-only normalised values. Higher is less sensitive. |
+| `max_form_issues_displayed` | `3`, positive integer. Higher shows more feedback; lower keeps the HUD focused. |
+
+Do not change landmark order or the `[60, 12, 4]` format without conversion and
+inference tests.
+
+## Dataset preparation
+
+Raw UI-PRMD and RehabExerAssess assets are absent from Git because of size and
+upstream licensing. Download UI-PRMD yourself and place raw Kinect files at:
 
 ```text
-1-6    select collection class
-SPACE  start / stop recording
-Z      undo last saved sample
-R      reset session counters
-Q/ESC  quit
+UI-PRMD/skl_whole/A01S01E02C01.skeleton
 ```
 
-If a trained model exists at `collector/models/squat_binary/best_model.pt`, the app loads it automatically and shows the last repetition result in the HUD.
-
-## Tests
+The checked-in converter has workspace-specific paths. In this checkout:
 
 ```powershell
-cd path\to\fintes_AI
-.\collector\venv\Scripts\python.exe -m unittest discover -s collector\tests -v
+python .\collector\RehabExerAssess-main\convert_uiprmd.py
+python .\collector\uiprmd_adapter.py
 ```
 
-The same test command runs in GitHub Actions on every push and pull request.
+The first command produces
+`collector/RehabExerAssess-main/data/UI-PRMD/{Correct,Incorrect}/Kinect/Skeletons/*.txt`.
+The adapter writes `[60, 12, 4]` `.npy` files to
+`collector/dataset/squat_uiprmd/{correct,incorrect}`. Training reads the converted
+`.txt` source by default with a subject-safe split (08–10 held out). Tests use
+synthetic fixtures, not local data; no maintained evaluation command exists.
 
-## UI-PRMD Data
+Known limitation: make `convert_uiprmd.py` CLI-configurable before use from another
+checkout. The bundled RehabExerAssess tree is reference code, not a live runtime
+dependency.
 
-The raw UI-PRMD dataset is not included in the repository.
+## CI and merge policy
 
-Expected local layout:
+The single workflow runs `ruff check .`, `ruff format --check .`, and the complete
+unittest suite in separate `lint` and `tests` jobs with pip caching. Errors are not
+suppressed. Actions alone does not prove merges are blocked: configure Branch
+Protection/Rulesets for `main` with required status checks `lint` and `tests`.
+
+## Architecture
 
 ```text
-UI-PRMD/
-  skl_whole/
-    A01S01E02C01.skeleton
-    ...
+camera (collector/camera.py)
+  -> pose extraction (collector/pose.py)
+  -> repetition detection (collector/repetition.py)
+  -> quality/preprocessing (collector/quality.py, collector/preprocessing.py)
+  -> ML/feedback (collector/form_inference.py, collector/form_analysis.py)
+  -> storage (collector/storage.py)
 ```
 
-Convert raw UI-PRMD A01 Kinect skeletons into the reference `.txt` layout:
-
-```powershell
-.\collector\venv\Scripts\python.exe .\collector\RehabExerAssess-main\convert_uiprmd.py
-```
-
-Convert reference UI-PRMD files into canonical `[60, 12, 4]` samples:
-
-```powershell
-.\collector\venv\Scripts\python.exe .\collector\uiprmd_adapter.py
-```
-
-## Train Binary Squat Classifier
-
-The current MVP trains a binary classifier:
-
-```text
-0 = incorrect
-1 = correct
-```
-
-Training uses a deterministic subject-safe split. By default, subjects `08`, `09`, and `10` are held out for testing.
-
-```powershell
-.\collector\venv\Scripts\python.exe .\collector\train_form_classifier.py --epochs 30 --batch_size 16 --cpu
-```
-
-Generated artifacts are written under:
-
-```text
-collector/models/squat_binary/
-```
-
-That folder is ignored by Git.
-
-## Notes For Contributors
-
-- Do not commit raw datasets, generated `.npy` samples, virtual environments, or model checkpoints.
-- Keep coordinate transformations explicit and centralized in `collector/canonical.py` and `collector/preprocessing.py`.
-- Use the existing tests before opening a PR:
-
-```powershell
-.\collector\venv\Scripts\python.exe -m unittest discover -s collector\tests -v
-```
-
-## License
-
-No top-level license has been selected yet. The nested `collector/RehabExerAssess-main` folder contains its own upstream license and README.
+`collector/live_flow.py` coordinates completed-repetition processing;
+`collector/canonical.py` defines landmark and label contracts.
