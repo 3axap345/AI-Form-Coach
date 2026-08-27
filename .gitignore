@@ -52,7 +52,6 @@ collector/RehabExerAssess-main/logs/
 # Local environment files
 .env
 .env.*
-!.env.example
 
 # External/reference projects
 collector/RehabExerAssess-main/

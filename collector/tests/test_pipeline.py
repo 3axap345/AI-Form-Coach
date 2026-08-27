@@ -37,6 +37,7 @@ from repetition import Phase, RepetitionDetector  # noqa: E402
 from storage import StorageManager  # noqa: E402
 from ui import HudState, draw_hud  # noqa: E402
 from uiprmd_adapter import (  # noqa: E402
+    convert_dataset,
     load_uiprmd_skeleton,
     load_uiprmd_skeleton_txt,
     process_file,
@@ -192,6 +193,26 @@ class PipelineTests(unittest.TestCase):
         self.assertIsNotNone(completed)
         return completed
 
+    def test_default_config_is_valid(self):
+        self.assertIsInstance(Config(), Config)
+
+    def test_config_rejects_invalid_ranges_and_sizes(self):
+        invalid_configs = (
+            ({"target_fps": 0}, "target_fps must be positive"),
+            ({"standing_confirm_frames": 0}, "standing_confirm_frames must be positive"),
+            ({"min_avg_visibility": 1.1}, "min_avg_visibility must be between 0 and 1"),
+            (
+                {"min_bbox_area_ratio": 0.9, "max_bbox_area_ratio": 0.1},
+                "min_bbox_area_ratio must not exceed max_bbox_area_ratio",
+            ),
+            ({"min_rep_duration_sec": -0.1}, "min_rep_duration_sec must be non-negative"),
+            ({"reconnect_delay_sec": -0.1}, "reconnect_delay_sec must be non-negative"),
+        )
+        for kwargs, message in invalid_configs:
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaisesRegex(ValueError, message):
+                    Config(**kwargs)
+
     def test_filename_and_label_mapping(self):
         correct = parse_uiprmd_filename("A01S01E02C01.txt")
         incorrect = parse_uiprmd_filename("A01S01E02C02.txt")
@@ -216,6 +237,25 @@ class PipelineTests(unittest.TestCase):
                 -raw_left_shoulder_y,
                 places=4,
             )
+
+    def test_uiprmd_converter_uses_explicit_external_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source_root = Path(tmp) / "converted"
+            source = source_root / "Correct" / "Kinect" / "Skeletons" / TXT_SAMPLE_NAME
+            write_uiprmd_txt_fixture(source)
+            output_root = Path(tmp) / "output"
+
+            counts = convert_dataset(source_root, output_root, Config())
+
+            self.assertEqual(counts, {"correct": 1, "incorrect": 0})
+            converted_sample = output_root / "correct" / f"{Path(TXT_SAMPLE_NAME).stem}.npy"
+            self.assertTrue(converted_sample.exists())
+
+    def test_uiprmd_converter_rejects_missing_external_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing_root = Path(tmp) / "missing"
+            with self.assertRaisesRegex(FileNotFoundError, "Provide --source-root"):
+                convert_dataset(missing_root, Path(tmp) / "output", Config())
 
     def test_preprocessing_shape_orientation_and_z(self):
         with tempfile.TemporaryDirectory() as tmp:
