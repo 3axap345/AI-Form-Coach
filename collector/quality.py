@@ -28,7 +28,7 @@ def check_quality(
     # 1. Длительность
     if duration_sec < cfg.min_rep_duration_sec:
         return QualityReport(False, "repetition too short (likely false trigger)", 0.0)
-    if duration_sec > cfg.max_rep_duration_sec:
+    if duration_sec > cfg.max_saved_rep_duration_sec:
         return QualityReport(False, "repetition too long (likely stalled movement)", 0.0)
 
     # 2. Доля пропущенных кадров (человек не обнаружен MediaPipe)

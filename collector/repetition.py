@@ -76,7 +76,10 @@ class RepetitionDetector:
         completed: Optional[CompletedRep] = None
 
         if self._phase == Phase.STANDING:
-            if angle < cfg.standing_knee_angle - cfg.hysteresis:
+            standing_threshold = cfg.standing_knee_angle - cfg.hysteresis
+            if angle >= standing_threshold:
+                self._standing_streak += 1
+            elif self._standing_streak >= cfg.standing_confirm_frames:
                 # Начинаем новое повторение
                 self._phase = Phase.DESCENDING
                 self._rep_buffer = [frame_landmarks]
@@ -85,7 +88,8 @@ class RepetitionDetector:
                 self._standing_streak = 0
                 logger.debug("Phase -> DESCENDING (angle=%.1f)", angle)
             else:
-                self._standing_streak += 1
+                # A valid start needs consecutive standing frames beforehand.
+                self._standing_streak = 0
 
         elif self._phase == Phase.DESCENDING:
             self._rep_buffer.append(frame_landmarks)
@@ -135,7 +139,7 @@ class RepetitionDetector:
         # Защита от "застрявших" повторений (слишком долго не возвращаемся в standing)
         if self._phase != Phase.STANDING and self._rep_start_time is not None:
             elapsed = now - self._rep_start_time
-            if elapsed > cfg.max_rep_duration_sec:
+            if elapsed > cfg.max_rep_tracking_duration_sec:
                 logger.warning(
                     "Repetition timeout after %.1fs, resetting FSM without saving", elapsed
                 )

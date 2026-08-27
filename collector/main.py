@@ -15,16 +15,13 @@ Entry point. Захватывает видео, гоняет через MediaPip
 
 import logging
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 
 import cv2
 from camera import Camera, CameraError
 from config import CONFIG, EXERCISE_CLASSES
-from form_analysis import analyze_form, top_detected_issues
+from live_flow import LiveRepProcessor
 from pose import PoseEstimator
-from preprocessing import build_sample
-from quality import check_quality, is_duplicate
 from repetition import Phase, RepetitionDetector
 from storage import StorageManager
 from ui import HudState, draw_hud
@@ -86,6 +83,7 @@ def main() -> None:
                 logger.exception("Failed to load form classifier; live collection will continue")
         else:
             logger.info("Form classifier model not found, inference disabled: %s", model_path)
+    rep_processor = LiveRepProcessor(cfg, storage, classifier)
 
     current_class_id = 0
     current_class_name = EXERCISE_CLASSES[ord("1")][1]
@@ -142,59 +140,29 @@ def main() -> None:
 
                     if completed is not None:
                         session.reps_detected += 1
-
-                        report = check_quality(
-                            raw_frames=completed.frames,
-                            duration_sec=completed.duration_sec,
-                            missing_frame_count=missing_frame_count,
-                            total_expected_frames=expected_frame_count,
-                            cfg=cfg,
+                        result = rep_processor.process(
+                            completed,
+                            missing_frame_count,
+                            expected_frame_count,
+                            current_class_name,
+                            current_class_id,
                         )
-
-                        if report.passed:
-                            sample = build_sample(completed.frames, cfg)
-                            if classifier is not None:
-                                try:
-                                    last_prediction = classifier.predict(sample)
-                                    analysis = analyze_form(sample, cfg)
-                                    last_form_issues = top_detected_issues(
-                                        analysis,
-                                        limit=cfg.max_form_issues_displayed,
-                                    )
-                                    logger.info(
-                                        "Form prediction: %s (confidence=%.3f)",
-                                        last_prediction["label"],
-                                        last_prediction["confidence"],
-                                    )
-                                except Exception:
-                                    logger.exception("Form prediction failed")
-                                    last_prediction = None
-                                    last_form_issues = []
-
-                            last_sample = storage.last_sample_for_class(current_class_name)
-                            if is_duplicate(sample, last_sample):
-                                session.rejected += 1
-                                last_reject_reason = "duplicate of previous sample"
-                                logger.warning("Sample rejected: %s", last_reject_reason)
-                            else:
-                                metadata = {
-                                    "class_label": current_class_name,
-                                    "class_id": current_class_id,
-                                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                                    "original_frame_count": len(completed.frames),
-                                    "fps": cfg.target_fps,
-                                    "duration_sec": round(completed.duration_sec, 3),
-                                    "quality_score": round(report.score, 3),
-                                    "rejection_reason": None,
-                                }
-                                storage.save_sample(current_class_name, sample, metadata)
-                                session.samples_saved += 1
-                                flash_counter = cfg.flash_frames_on_rep
-                                last_reject_reason = None
+                        last_prediction = result.prediction
+                        last_form_issues = result.form_issues
+                        if result.prediction is not None:
+                            logger.info(
+                                "Form prediction: %s (confidence=%.3f)",
+                                result.prediction["label"],
+                                result.prediction["confidence"],
+                            )
+                        if result.saved:
+                            session.samples_saved += 1
+                            flash_counter = cfg.flash_frames_on_rep
+                            last_reject_reason = None
                         else:
                             session.rejected += 1
-                            last_reject_reason = report.reason
-                            logger.warning("Sample rejected: %s", report.reason)
+                            last_reject_reason = result.rejection_reason
+                            logger.warning("Sample rejected: %s", last_reject_reason)
 
                         # Новый цикл замера missing/expected для следующего повторения
                         missing_frame_count = 0

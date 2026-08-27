@@ -63,10 +63,11 @@ class Config:
     hysteresis: float = 8.0  # люфт вокруг порогов, чтобы убрать дребезг
     standing_confirm_frames: int = 5  # столько кадров подряд в STANDING перед новым циклом
     min_rep_duration_sec: float = 0.4
-    max_rep_duration_sec: float = 5.0
+    max_rep_tracking_duration_sec: float = 5.0  # reset the FSM if a repetition stalls
     smoothing_window: int = 5  # окно скользящего среднего по углам
 
     # --- Quality checks ---
+    max_saved_rep_duration_sec: float = 5.0  # longest repetition accepted for storage
     min_avg_visibility: float = 0.6
     min_keypoint_visibility: float = 0.4  # для критичных точек (колено/таз/лодыжка)
     max_missing_frame_ratio: float = 0.15  # доля кадров без обнаруженной позы

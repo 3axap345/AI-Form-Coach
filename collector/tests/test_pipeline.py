@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -25,7 +26,11 @@ from dataset_split import discover_uiprmd_txt, split_stats, subject_safe_split  
 from form_analysis import analyze_form, top_detected_issues  # noqa: E402
 from form_inference import FormClassifierInference, ModelLoadError, sha256_file  # noqa: E402
 from form_model import FormClassifier  # noqa: E402
+from live_flow import LiveRepProcessor  # noqa: E402
 from preprocessing import assert_canonical_orientation  # noqa: E402
+from quality import check_quality  # noqa: E402
+from repetition import Phase, RepetitionDetector  # noqa: E402
+from storage import StorageManager  # noqa: E402
 from uiprmd_adapter import (  # noqa: E402
     load_uiprmd_skeleton,
     load_uiprmd_skeleton_txt,
@@ -64,6 +69,40 @@ def synthetic_squat_sample() -> np.ndarray:
     sample[bottom, JOINT_INDEX["left_knee"], :2] = (0.75, 1.2)
     sample[bottom, JOINT_INDEX["right_knee"], :2] = (-0.75, 1.2)
     return sample
+
+
+def squat_landmark_frame(knee_x: float) -> np.ndarray:
+    """Create a symmetric live-landmark frame; 0.2 is standing, 1.2 is bottom."""
+    frame = np.zeros((12, 4), dtype=np.float32)
+    frame[:, 3] = 1.0
+    for side, names in (
+        (1.0, ("left_hip", "left_knee", "left_ankle")),
+        (-1.0, ("right_hip", "right_knee", "right_ankle")),
+    ):
+        hip, knee, ankle = (JOINT_INDEX[name] for name in names)
+        frame[hip, :2] = (side * 0.2, 0.0)
+        frame[knee, :2] = (side * knee_x, 1.0)
+        frame[ankle, :2] = (side * 0.2, 2.0)
+    return frame
+
+
+class FakePoseEstimator:
+    def process(self, frame: np.ndarray):
+        return type("FakePoseResult", (), {"landmarks": frame, "bbox_area_ratio": 0.25})()
+
+
+class FakeClassifier:
+    def __init__(self):
+        self.samples: list[np.ndarray] = []
+
+    def predict(self, sample: np.ndarray) -> dict:
+        self.samples.append(sample.copy())
+        return {
+            "label": "correct",
+            "label_id": 1,
+            "confidence": 0.95,
+            "probabilities": {"incorrect": 0.05, "correct": 0.95},
+        }
 
 
 def synthetic_uiprmd_skeleton(frame_count: int = 8) -> np.ndarray:
@@ -210,6 +249,102 @@ class PipelineTests(unittest.TestCase):
             torch.save(model.state_dict(), path)
             with self.assertRaisesRegex(ModelLoadError, "SHA-256 mismatch"):
                 FormClassifierInference(path, device="cpu", expected_sha256="0" * 64)
+
+    def test_standing_confirmation_is_required_before_rep_tracking(self):
+        cfg = Config(
+            standing_confirm_frames=3,
+            smoothing_window=1,
+            min_rep_duration_sec=0.1,
+        )
+        detector = RepetitionDetector(cfg)
+
+        self.assertIsNone(detector.update(squat_landmark_frame(1.2), now=0.0))
+        self.assertEqual(detector.phase, Phase.STANDING)
+        for now in (0.1, 0.2, 0.3):
+            self.assertIsNone(detector.update(squat_landmark_frame(0.2), now=now))
+
+        completed = None
+        for now, knee_x in ((0.4, 0.7), (0.5, 1.2), (0.6, 1.2), (0.7, 0.7), (0.8, 0.2)):
+            completed = detector.update(squat_landmark_frame(knee_x), now=now) or completed
+
+        self.assertIsNotNone(completed)
+        self.assertEqual(detector.phase, Phase.STANDING)
+
+    def test_tracking_timeout_and_storage_duration_are_independent(self):
+        cfg = Config(
+            standing_confirm_frames=1,
+            smoothing_window=1,
+            max_rep_tracking_duration_sec=0.2,
+            max_saved_rep_duration_sec=10.0,
+        )
+        detector = RepetitionDetector(cfg)
+        detector.update(squat_landmark_frame(0.2), now=0.0)
+        detector.update(squat_landmark_frame(0.7), now=0.1)
+        self.assertEqual(detector.phase, Phase.DESCENDING)
+        self.assertIsNone(detector.update(squat_landmark_frame(0.7), now=0.4))
+        self.assertEqual(detector.phase, Phase.STANDING)
+
+        report = check_quality(
+            [squat_landmark_frame(0.2)] * 3,
+            duration_sec=2.0,
+            missing_frame_count=0,
+            total_expected_frames=3,
+            cfg=cfg,
+        )
+        self.assertTrue(report.passed)
+
+    def test_live_flow_happy_path_saves_one_completed_repetition(self):
+        cfg = Config(
+            dataset_root="unused",
+            standing_confirm_frames=2,
+            smoothing_window=1,
+            min_rep_duration_sec=0.1,
+            min_avg_visibility=0.5,
+            min_keypoint_visibility=0.5,
+        )
+        pose_estimator = FakePoseEstimator()
+        detector = RepetitionDetector(cfg)
+        classifier = FakeClassifier()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg.dataset_root = str(Path(tmp) / "samples")
+            storage = StorageManager(cfg)
+            processor = LiveRepProcessor(cfg, storage, classifier)
+            completed = None
+            sequence = (
+                (0.0, 0.2),
+                (0.1, 0.2),
+                (0.2, 0.7),
+                (0.3, 1.2),
+                (0.4, 1.2),
+                (0.5, 0.7),
+                (0.6, 0.2),
+            )
+            for now, knee_x in sequence:
+                pose_result = pose_estimator.process(squat_landmark_frame(knee_x))
+                completed = detector.update(pose_result.landmarks, now=now) or completed
+
+            self.assertIsNotNone(completed)
+            result = processor.process(
+                completed,
+                missing_frame_count=0,
+                total_expected_frames=len(sequence),
+                class_name="correct",
+                class_id=0,
+            )
+            storage.close()
+
+            self.assertTrue(result.saved)
+            self.assertIsNone(result.rejection_reason)
+            self.assertEqual(result.prediction["label"], "correct")
+            self.assertEqual(len(classifier.samples), 1)
+            self.assertEqual(classifier.samples[0].shape, canonical_shape())
+            saved_npy = Path(cfg.dataset_root) / "correct" / "sample_000001.npy"
+            saved_json = saved_npy.with_suffix(".json")
+            self.assertTrue(saved_npy.exists())
+            self.assertEqual(np.load(saved_npy).shape, canonical_shape())
+            metadata = json.loads(saved_json.read_text(encoding="utf-8"))
+            self.assertEqual(metadata["class_label"], "correct")
 
     def test_form_analysis_shallow_depth(self):
         sample = synthetic_squat_sample()
