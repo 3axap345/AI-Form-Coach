@@ -3,10 +3,8 @@ State machine для автоматического обнаружения по�
 
 STANDING -> DESCENDING -> BOTTOM -> ASCENDING -> STANDING
 
-Основной сигнал: сглаженный knee angle (hip-knee-ankle).
-Вторичный сигнал: hip vertical position (для устойчивости к шуму на
-одиночном angle-пороге не полагаемся — оба сигнала должны быть согласованы
-на переходах DESCENDING/ASCENDING).
+Основной сигнал: сглаженный knee angle (hip-knee-ankle). Гистерезис и
+подтверждение нескольких standing-кадров защищают переходы от шума.
 """
 
 import collections
@@ -18,7 +16,7 @@ from typing import List, Optional
 
 import numpy as np
 from config import Config
-from landmarks import hip_vertical_position, knee_angle
+from landmarks import knee_angle
 
 logger = logging.getLogger("collector.repetition")
 
@@ -146,9 +144,6 @@ class RepetitionDetector:
                 self._reset()
 
         return completed
-
-    def hip_position(self, frame_landmarks: np.ndarray) -> float:
-        return hip_vertical_position(frame_landmarks)
 
     def _reset(self) -> None:
         self._phase = Phase.STANDING

@@ -59,12 +59,6 @@ def knee_angle(frame_landmarks: np.ndarray) -> float:
     return (left + right) / 2.0
 
 
-def hip_vertical_position(frame_landmarks: np.ndarray) -> float:
-    """Y-координата центра таза (растёт вниз в image space)."""
-    mid_hip = (frame_landmarks[_IDX["left_hip"]] + frame_landmarks[_IDX["right_hip"]]) / 2.0
-    return float(mid_hip[COORD_Y])
-
-
 def average_visibility(frame_landmarks: np.ndarray, names=None) -> float:
     if names is None:
         idxs = range(frame_landmarks.shape[0])

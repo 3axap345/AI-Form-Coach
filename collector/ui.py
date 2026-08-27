@@ -11,7 +11,6 @@ import numpy as np
 
 @dataclass
 class HudState:
-    exercise: str = "SQUAT"
     class_name: str = "-"
     fps: float = 0.0
     reps_detected: int = 0
@@ -24,7 +23,7 @@ class HudState:
     last_reject_reason: Optional[str] = None
     prediction: Optional[str] = None
     prediction_confidence: Optional[float] = None
-    form_issues: Optional[list] = None
+    form_issues: Optional[list[dict]] = None
     flash: bool = False  # визуальный сигнал при новом повторении
 
 
@@ -103,6 +102,23 @@ def draw_last_prediction(frame: np.ndarray, state: HudState, x: int, y: int) -> 
     return y + 74
 
 
+def draw_diagnostics(frame: np.ndarray, state: HudState, x: int, y: int) -> None:
+    _put(
+        frame,
+        f"Class: {state.class_name}  Saved: {state.samples_saved}  Rejected: {state.rejected}",
+        (x, y),
+        scale=0.5,
+        color=(200, 210, 220),
+    )
+    y += 24
+    if state.knee_angle is not None:
+        _put(frame, f"Knee angle: {state.knee_angle:.0f} deg", (x, y), scale=0.5)
+        y += 24
+    for issue in state.form_issues or []:
+        _put(frame, f"Feedback: {issue['message']}", (x, y), scale=0.5, color=(70, 190, 255))
+        y += 24
+
+
 def draw_hud(frame: np.ndarray, state: HudState) -> None:
     h, w = frame.shape[:2]
 
@@ -113,7 +129,7 @@ def draw_hud(frame: np.ndarray, state: HudState) -> None:
 
     panel_x, panel_y = 18, 18
     panel_w = min(360, max(300, w // 4))
-    panel_h = 320
+    panel_h = min(440, h - panel_y - 18)
     _draw_panel(frame, panel_x, panel_y, panel_w, panel_h)
 
     x = panel_x + 18
@@ -122,7 +138,8 @@ def draw_hud(frame: np.ndarray, state: HudState) -> None:
     y += 42
     y = draw_status(frame, state, x, y)
     y = draw_rep_counter(frame, state, x, y)
-    draw_last_prediction(frame, state, x, y)
+    y = draw_last_prediction(frame, state, x, y)
+    draw_diagnostics(frame, state, x, y)
 
     rec_color = (70, 80, 255) if state.recording else (160, 165, 170)
     rec_text = "REC" if state.recording else "PAUSED"

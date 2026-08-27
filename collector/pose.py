@@ -23,6 +23,10 @@ from config import LANDMARK_INDICES, NUM_LANDMARKS, Config
 logger = logging.getLogger("collector.pose")
 
 
+class PoseDataError(ValueError):
+    """MediaPipe returned a pose that cannot satisfy the canonical contract."""
+
+
 @dataclass
 class PoseResult:
     landmarks: np.ndarray  # [NUM_LANDMARKS, 4] -> x, y, z, visibility
@@ -51,6 +55,12 @@ class PoseEstimator:
             return None
 
         all_lm = result.pose_landmarks.landmark
+        required_landmark_index = max(LANDMARK_INDICES)
+        if len(all_lm) <= required_landmark_index:
+            raise PoseDataError(
+                "pose result is missing required landmarks: "
+                f"expected index {required_landmark_index}, got {len(all_lm)} landmarks"
+            )
         selected = np.zeros((NUM_LANDMARKS, 4), dtype=np.float32)
         xs, ys = [], []
         for i, idx in enumerate(LANDMARK_INDICES):
