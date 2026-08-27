@@ -40,6 +40,7 @@ make format
 - Do not commit datasets, generated samples, checkpoints, or virtual environments.
 - Never use unsafe pickle/model loading; inference must remain weights-only.
 - Document every new configuration parameter, including units and tuning effect.
+- Extend `Config` validation and its regression tests when adding a bounded setting.
 - Add a regression test for a bugfix where practical.
 - Before finishing, run `make lint` and `make test`; run `make coverage` after
   business-logic changes and `make typecheck` after changes to the typed core.

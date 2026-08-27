@@ -39,6 +39,10 @@ Their `.txt` counterparts are generated exact-version SHA-256 locks. CI installs
 never hand-edit a generated lock. `Makefile` honours `PYTHON`, e.g.
 `make PYTHON=.venv/Scripts/python.exe test`.
 
+`pyproject.toml` is the source of truth for the supported Python range; CI currently
+tests Python 3.11. Configuration defaults and their validation live in
+`collector/config.py`; the threshold table below explains their safe tuning context.
+
 MediaPipe is pinned to `0.10.14`, whose requirement is `protobuf>=4.25.3,<5`.
 The explicit `protobuf==4.25.9` remains compatible and is newer than the
 `<4.25.8` range affected by CVE-2025-4565.
@@ -122,10 +126,10 @@ The single workflow has separate `lint`, `tests`, `coverage`, `typecheck`, and
 files, reports missing lines, and fails below the current production baseline of
 63%. `build` creates and uploads the source bundle. Errors are not suppressed.
 
-This checkout cannot verify repository rules because GitHub CLI/API authentication is
-not available. In GitHub, configure `main` through **Settings → Rules → Rulesets**
-(or Branch protection rules) to require these exact status checks before merging:
-`lint`, `tests`, `coverage`, `typecheck`, and `build`.
+The active `Protect main` ruleset targets `main`, requires `lint`, `tests`,
+`coverage`, `typecheck`, and `build`, and blocks deletion and force-pushes. It does
+not currently require a pull request/review or an up-to-date branch before merging;
+enable those options in the ruleset if that workflow is desired.
 
 ## Architecture
 

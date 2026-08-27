@@ -192,6 +192,26 @@ class PipelineTests(unittest.TestCase):
         self.assertIsNotNone(completed)
         return completed
 
+    def test_default_config_is_valid(self):
+        self.assertIsInstance(Config(), Config)
+
+    def test_config_rejects_invalid_ranges_and_sizes(self):
+        invalid_configs = (
+            ({"target_fps": 0}, "target_fps must be positive"),
+            ({"standing_confirm_frames": 0}, "standing_confirm_frames must be positive"),
+            ({"min_avg_visibility": 1.1}, "min_avg_visibility must be between 0 and 1"),
+            (
+                {"min_bbox_area_ratio": 0.9, "max_bbox_area_ratio": 0.1},
+                "min_bbox_area_ratio must not exceed max_bbox_area_ratio",
+            ),
+            ({"min_rep_duration_sec": -0.1}, "min_rep_duration_sec must be non-negative"),
+            ({"reconnect_delay_sec": -0.1}, "reconnect_delay_sec must be non-negative"),
+        )
+        for kwargs, message in invalid_configs:
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaisesRegex(ValueError, message):
+                    Config(**kwargs)
+
     def test_filename_and_label_mapping(self):
         correct = parse_uiprmd_filename("A01S01E02C01.txt")
         incorrect = parse_uiprmd_filename("A01S01E02C02.txt")

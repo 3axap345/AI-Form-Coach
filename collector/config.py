@@ -97,5 +97,47 @@ class Config:
     show_skeleton: bool = True
     flash_frames_on_rep: int = 6  # сколько кадров держать визуальную вспышку
 
+    def __post_init__(self) -> None:
+        positive_values = {
+            "target_width": self.target_width,
+            "target_height": self.target_height,
+            "target_fps": self.target_fps,
+            "reconnect_attempts": self.reconnect_attempts,
+            "sequence_length": self.sequence_length,
+            "standing_confirm_frames": self.standing_confirm_frames,
+            "max_rep_tracking_duration_sec": self.max_rep_tracking_duration_sec,
+            "max_saved_rep_duration_sec": self.max_saved_rep_duration_sec,
+            "smoothing_window": self.smoothing_window,
+            "save_queue_maxsize": self.save_queue_maxsize,
+            "form_analysis_bottom_window": self.form_analysis_bottom_window,
+            "form_analysis_smoothing_window": self.form_analysis_smoothing_window,
+            "max_form_issues_displayed": self.max_form_issues_displayed,
+            "flash_frames_on_rep": self.flash_frames_on_rep,
+        }
+        for name, value in positive_values.items():
+            if value <= 0:
+                raise ValueError(f"{name} must be positive, got {value}")
+
+        unit_interval_values = {
+            "min_detection_confidence": self.min_detection_confidence,
+            "min_tracking_confidence": self.min_tracking_confidence,
+            "min_avg_visibility": self.min_avg_visibility,
+            "min_keypoint_visibility": self.min_keypoint_visibility,
+            "max_missing_frame_ratio": self.max_missing_frame_ratio,
+            "min_bbox_area_ratio": self.min_bbox_area_ratio,
+            "max_bbox_area_ratio": self.max_bbox_area_ratio,
+            "form_analysis_min_visibility": self.form_analysis_min_visibility,
+        }
+        for name, value in unit_interval_values.items():
+            if not 0.0 <= value <= 1.0:
+                raise ValueError(f"{name} must be between 0 and 1, got {value}")
+
+        if self.min_bbox_area_ratio > self.max_bbox_area_ratio:
+            raise ValueError("min_bbox_area_ratio must not exceed max_bbox_area_ratio")
+        if self.min_rep_duration_sec < 0:
+            raise ValueError("min_rep_duration_sec must be non-negative")
+        if self.reconnect_delay_sec < 0:
+            raise ValueError("reconnect_delay_sec must be non-negative")
+
 
 CONFIG = Config()
