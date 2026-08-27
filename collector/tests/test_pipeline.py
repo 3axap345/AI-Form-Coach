@@ -37,6 +37,7 @@ from repetition import Phase, RepetitionDetector  # noqa: E402
 from storage import StorageManager  # noqa: E402
 from ui import HudState, draw_hud  # noqa: E402
 from uiprmd_adapter import (  # noqa: E402
+    convert_dataset,
     load_uiprmd_skeleton,
     load_uiprmd_skeleton_txt,
     process_file,
@@ -236,6 +237,25 @@ class PipelineTests(unittest.TestCase):
                 -raw_left_shoulder_y,
                 places=4,
             )
+
+    def test_uiprmd_converter_uses_explicit_external_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source_root = Path(tmp) / "converted"
+            source = source_root / "Correct" / "Kinect" / "Skeletons" / TXT_SAMPLE_NAME
+            write_uiprmd_txt_fixture(source)
+            output_root = Path(tmp) / "output"
+
+            counts = convert_dataset(source_root, output_root, Config())
+
+            self.assertEqual(counts, {"correct": 1, "incorrect": 0})
+            converted_sample = output_root / "correct" / f"{Path(TXT_SAMPLE_NAME).stem}.npy"
+            self.assertTrue(converted_sample.exists())
+
+    def test_uiprmd_converter_rejects_missing_external_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing_root = Path(tmp) / "missing"
+            with self.assertRaisesRegex(FileNotFoundError, "Provide --source-root"):
+                convert_dataset(missing_root, Path(tmp) / "output", Config())
 
     def test_preprocessing_shape_orientation_and_z(self):
         with tempfile.TemporaryDirectory() as tmp:

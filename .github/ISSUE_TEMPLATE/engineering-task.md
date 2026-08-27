@@ -1,6 +1,10 @@
 # Goal
 
+# User impact
+
 # Context
+
+# Affected workflow / files
 
 # Non-goals
 
@@ -14,4 +18,6 @@
 commands
 ```
 
-# Risks / Notes
+# Handoff
+
+# Risks / external assumptions

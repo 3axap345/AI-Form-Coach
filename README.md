@@ -19,6 +19,9 @@ python .\collector\main.py
 The live app needs a local camera. Use `1`–`6` to choose a class, `SPACE` to
 record, `Z` to undo, `R` to reset counters, and `Q`/`ESC` to quit.
 
+For intended users, supported coaching claims, terminology, and UX limits, see
+[docs/product-context.md](docs/product-context.md).
+
 ## Development and dependencies
 
 ```bash
@@ -90,30 +93,38 @@ inference tests.
 
 ## Dataset preparation
 
-Raw UI-PRMD and RehabExerAssess assets are absent from Git because of size and
-upstream licensing. Download UI-PRMD yourself and place raw Kinect files at:
+UI-PRMD data and `RehabExerAssess-main` are external/local inputs: neither is in
+Git, and both are intentionally ignored due to upstream licensing and size. A clean
+checkout does **not** contain `collector/RehabExerAssess-main` or a converter for raw
+`.skeleton` files.
+
+Obtain UI-PRMD and, if required, perform raw `.skeleton` conversion with your own
+lawful external RehabExerAssess checkout or another verified converter. This project
+expects the resulting converted-text tree to have this layout:
 
 ```text
-UI-PRMD/skl_whole/A01S01E02C01.skeleton
+<converted-ui-prmd>/
+  Correct/Kinect/Skeletons/A01S01E02C01.txt
+  Incorrect/Kinect/Skeletons/A01S01E02C02.txt
 ```
 
-The checked-in converter has workspace-specific paths. In this checkout:
+From a clean checkout, these are the supported commands:
 
 ```powershell
-python .\collector\RehabExerAssess-main\convert_uiprmd.py
-python .\collector\uiprmd_adapter.py
+python .\collector\uiprmd_adapter.py --source-root <converted-ui-prmd>
+python .\collector\train_form_classifier.py --source-root <converted-ui-prmd>
 ```
 
-The first command produces
-`collector/RehabExerAssess-main/data/UI-PRMD/{Correct,Incorrect}/Kinect/Skeletons/*.txt`.
-The adapter writes `[60, 12, 4]` `.npy` files to
-`collector/dataset/squat_uiprmd/{correct,incorrect}`. Training reads the converted
-`.txt` source by default with a subject-safe split (08–10 held out). Tests use
-synthetic fixtures, not local data; no maintained evaluation command exists.
+The adapter writes `[60, 12, 4]` `.npy` files under
+`collector/dataset/squat_uiprmd/{correct,incorrect}`. Training reads converted `.txt`
+files directly and makes a subject-safe split (08–10 held out); it does not consume
+the adapter output. Tests use synthetic fixtures, not local datasets, and no
+maintained evaluation command exists.
 
-Known limitation: make `convert_uiprmd.py` CLI-configurable before use from another
-checkout. The bundled RehabExerAssess tree is reference code, not a live runtime
-dependency.
+To bypass all external-data work, use `make test`: it is a deterministic headless
+smoke suite using synthetic landmarks and mocked camera/pose components. The live
+application still requires a local camera; training requires the external converted
+text tree.
 
 The old one-off `aeon` dataset experiment is intentionally not part of the supported
 workflow and has been removed; no application or test dependency on `aeon` remains.
@@ -130,6 +141,18 @@ The active `Protect main` ruleset targets `main`, requires `lint`, `tests`,
 `coverage`, `typecheck`, and `build`, and blocks deletion and force-pushes. It does
 not currently require a pull request/review or an up-to-date branch before merging;
 enable those options in the ruleset if that workflow is desired.
+
+## Verification contract
+
+`make test` is the baseline proof for every change and works without a camera, model,
+or dataset. `make lint` is required before handoff; use `make coverage` for
+business-logic changes and `make typecheck` when modifying the typed core pipeline.
+`make format` changes source files and is optional when checks already pass.
+
+For a headless proof, attach the commands and their outcomes from these targets. A
+camera smoke test is manual (`python .\collector\main.py`) and is not required when
+hardware is unavailable; state that limitation in the handoff. Dataset conversion and
+training are likewise optional external checks unless the change affects that workflow.
 
 ## Architecture
 

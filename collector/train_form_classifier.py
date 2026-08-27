@@ -84,6 +84,11 @@ def build_or_load_split(args) -> dict:
         return load_split_manifest(args.split_manifest)
 
     records = discover_uiprmd_txt(args.source_root, activity=args.activity)
+    if not records:
+        raise ValueError(
+            f"No converted UI-PRMD text files found in {args.source_root}. "
+            "Provide --source-root with Correct/ and Incorrect/ Kinect/Skeletons directories."
+        )
     split = subject_safe_split(records, test_subjects=args.test_subjects)
     save_split_manifest(split, args.split_manifest)
     return split
@@ -186,9 +191,12 @@ def train(args) -> dict:
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--source-root",
         "--source_root",
+        dest="source_root",
         type=Path,
-        default=PROJECT_ROOT / "collector" / "RehabExerAssess-main" / "data" / "UI-PRMD",
+        required=True,
+        help="Externally prepared UI-PRMD converted-text root.",
     )
     parser.add_argument("--activity", default="01")
     parser.add_argument("--test_subjects", nargs="+", default=["08", "09", "10"])

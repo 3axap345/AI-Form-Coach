@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -99,14 +100,16 @@ def process_file(path: Path, cfg: Config) -> np.ndarray:
     return sample
 
 
-def main():
-    cfg = Config()
-
-    source_root = PROJECT_ROOT / "collector" / "RehabExerAssess-main" / "data" / "UI-PRMD"
-
-    output_root = PROJECT_ROOT / "collector" / "dataset" / "squat_uiprmd"
+def convert_dataset(source_root: Path, output_root: Path, cfg: Config) -> dict[str, int]:
+    """Convert a user-provided UI-PRMD converted-text tree into canonical samples."""
+    if not source_root.is_dir():
+        raise FileNotFoundError(
+            f"UI-PRMD converted-text root does not exist: {source_root}. "
+            "Provide --source-root after obtaining and converting the external dataset."
+        )
 
     print(FOOT_POLICY)
+    counts: dict[str, int] = {}
 
     splits = {
         "correct": source_root / "Correct" / "Kinect" / "Skeletons",
@@ -142,6 +145,40 @@ def main():
                 print(f"ERROR {path.name}: {e}")
 
         print(f"{label}: success={success}, failed={failed}")
+        counts[label] = success
+
+    return counts
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Convert externally prepared UI-PRMD Kinect text files into canonical samples."
+    )
+    parser.add_argument(
+        "--source-root",
+        "--source_root",
+        dest="source_root",
+        type=Path,
+        required=True,
+        help="Directory containing Correct/ and Incorrect/ converted Kinect text trees.",
+    )
+    parser.add_argument(
+        "--output-root",
+        "--output_root",
+        dest="output_root",
+        type=Path,
+        default=PROJECT_ROOT / "collector" / "dataset" / "squat_uiprmd",
+        help=(
+            "Directory for generated canonical .npy samples "
+            "(default: collector/dataset/squat_uiprmd)."
+        ),
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    convert_dataset(args.source_root, args.output_root, Config())
 
 
 if __name__ == "__main__":
