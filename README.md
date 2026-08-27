@@ -22,6 +22,11 @@ record, `Z` to undo, `R` to reset counters, and `Q`/`ESC` to quit.
 For intended users, supported coaching claims, terminology, and UX limits, see
 [docs/product-context.md](docs/product-context.md).
 
+The MVP's skeleton/data/feedback decisions are recorded in
+[ADR 0001](docs/adr/0001-mvp-data-and-feedback-boundaries.md). The owner, intent, and
+calibration TODOs for form-analysis and quality thresholds are in
+[docs/form-analysis-intent.md](docs/form-analysis-intent.md).
+
 ## Development and dependencies
 
 ```bash

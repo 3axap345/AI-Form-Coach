@@ -47,6 +47,8 @@ make format
 - Do not commit `.env` files, local models, cached artefacts, or the external
   `collector/RehabExerAssess-main/` checkout.
 - Never use unsafe pickle/model loading; inference must remain weights-only.
+- Do not alter medical/non-medical claims, coaching-rule intent, or clinical wording
+  without explicit project-owner approval and an update to `docs/form-analysis-intent.md`.
 - Document every new configuration parameter, including units and tuning effect.
 - Extend `Config` validation and its regression tests when adding a bounded setting.
 - Add a regression test for a bugfix where practical.
