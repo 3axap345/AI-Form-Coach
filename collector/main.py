@@ -12,22 +12,22 @@ Entry point. Захватывает видео, гоняет через MediaPip
   R      сброс счётчиков (reps/saved/rejected) для текущей сессии
   Q      выход
 """
+
 import logging
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 import cv2
-
-from config import CONFIG, EXERCISE_CLASSES
 from camera import Camera, CameraError
+from config import CONFIG, EXERCISE_CLASSES
+from form_analysis import analyze_form, top_detected_issues
 from pose import PoseEstimator
-from repetition import RepetitionDetector, Phase
 from preprocessing import build_sample
 from quality import check_quality, is_duplicate
+from repetition import Phase, RepetitionDetector
 from storage import StorageManager
 from ui import HudState, draw_hud
-from form_analysis import analyze_form, top_detected_issues
 
 logging.basicConfig(
     level=logging.INFO,
@@ -61,7 +61,9 @@ def main() -> None:
         camera = Camera(cfg)
     except CameraError as e:
         logger.error(str(e))
-        logger.error("Проверьте, что камера не занята другим приложением, и настройки сети/драйверов.")
+        logger.error(
+            "Проверьте, что камера не занята другим приложением, и настройки сети/драйверов."
+        )
         return
 
     pose_estimator = PoseEstimator(cfg)

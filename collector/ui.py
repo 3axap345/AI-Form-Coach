@@ -1,6 +1,7 @@
 """
 Отрисовка чистого HUD поверх кадра.
 """
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -19,16 +20,18 @@ class HudState:
     phase: str = "-"
     knee_angle: Optional[float] = None
     recording: bool = False
-    warning: Optional[str] = None       # напр. "too far", "no person"
+    warning: Optional[str] = None  # напр. "too far", "no person"
     last_reject_reason: Optional[str] = None
     prediction: Optional[str] = None
     prediction_confidence: Optional[float] = None
     form_issues: Optional[list] = None
-    flash: bool = False                  # визуальный сигнал при новом повторении
+    flash: bool = False  # визуальный сигнал при новом повторении
 
 
 def _put(img, text, org, scale=0.6, color=(255, 255, 255), thickness=1):
-    cv2.putText(img, text, org, cv2.FONT_HERSHEY_SIMPLEX, scale, (0, 0, 0), thickness + 2, cv2.LINE_AA)
+    cv2.putText(
+        img, text, org, cv2.FONT_HERSHEY_SIMPLEX, scale, (0, 0, 0), thickness + 2, cv2.LINE_AA
+    )
     cv2.putText(img, text, org, cv2.FONT_HERSHEY_SIMPLEX, scale, color, thickness, cv2.LINE_AA)
 
 
@@ -67,7 +70,9 @@ def draw_status(frame: np.ndarray, state: HudState, x: int, y: int) -> int:
 
 def draw_rep_counter(frame: np.ndarray, state: HudState, x: int, y: int) -> int:
     _put(frame, "REPS", (x, y), scale=0.5, color=(190, 200, 210), thickness=1)
-    _put(frame, str(state.reps_detected), (x, y + 48), scale=1.6, color=(255, 255, 255), thickness=3)
+    _put(
+        frame, str(state.reps_detected), (x, y + 48), scale=1.6, color=(255, 255, 255), thickness=3
+    )
     return y + 86
 
 
@@ -121,7 +126,14 @@ def draw_hud(frame: np.ndarray, state: HudState) -> None:
 
     rec_color = (70, 80, 255) if state.recording else (160, 165, 170)
     rec_text = "REC" if state.recording else "PAUSED"
-    _put(frame, rec_text, (panel_x + panel_w - 95, panel_y + 34), color=rec_color, scale=0.65, thickness=2)
+    _put(
+        frame,
+        rec_text,
+        (panel_x + panel_w - 95, panel_y + 34),
+        color=rec_color,
+        scale=0.65,
+        thickness=2,
+    )
 
     if state.last_reject_reason:
         _put(frame, f"Rejected: {state.last_reject_reason}", (15, h - 20), color=(0, 165, 255))

@@ -11,14 +11,14 @@ Coordinate system:
     - z: relative depth, centered at mid-hip and scaled like x/y
     - visibility: confidence in [0, 1]
 """
+
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import Enum
-import re
 from pathlib import Path
 from typing import Dict, Iterable, Tuple
-
 
 SEQUENCE_LENGTH = 60
 

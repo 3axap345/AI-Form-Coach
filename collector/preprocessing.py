@@ -8,13 +8,13 @@
 как часть техники, а truncation теряет часть движения. Интерполяция
 сохраняет полную динамику приседа независимо от темпа выполнения.
 """
+
 from typing import List
 
 import numpy as np
-
-from config import Config, NUM_LANDMARKS
-from landmarks import normalize_frame, compute_scale
-from canonical import JOINT_INDEX, COORD_Y
+from canonical import COORD_Y, JOINT_INDEX
+from config import Config
+from landmarks import compute_scale, normalize_frame
 
 
 def resample_sequence(frames: List[np.ndarray], target_length: int) -> np.ndarray:
@@ -29,9 +29,7 @@ def resample_sequence(frames: List[np.ndarray], target_length: int) -> np.ndarra
     resampled = np.empty((target_length, raw.shape[1], raw.shape[2]), dtype=np.float32)
     for lm_idx in range(raw.shape[1]):
         for coord_idx in range(raw.shape[2]):
-            resampled[:, lm_idx, coord_idx] = np.interp(
-                t_target, t_raw, raw[:, lm_idx, coord_idx]
-            )
+            resampled[:, lm_idx, coord_idx] = np.interp(t_target, t_raw, raw[:, lm_idx, coord_idx])
     return resampled
 
 
@@ -84,9 +82,5 @@ def orientation_diagnostics(sample: np.ndarray) -> dict:
 def assert_canonical_orientation(sample: np.ndarray, initial_fraction: float = 0.2) -> None:
     initial_len = max(1, int(round(sample.shape[0] * initial_fraction)))
     diag = orientation_diagnostics(sample[:initial_len])
-    if not (
-        diag["shoulder_vs_hip"] < 0
-        and diag["foot_vs_hip"] > 0
-        and diag["foot_vs_knee"] > 0
-    ):
+    if not (diag["shoulder_vs_hip"] < 0 and diag["foot_vs_hip"] > 0 and diag["foot_vs_knee"] > 0):
         raise ValueError(f"Skeleton orientation is not canonical Y-down: {diag}")

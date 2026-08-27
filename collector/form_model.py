@@ -1,12 +1,12 @@
 """
 Binary squat form classifier for canonical [N,T,12,4] skeleton sequences.
 """
+
 from __future__ import annotations
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from canonical import CANONICAL_CONNECTIONS, NUM_CHANNELS, NUM_JOINTS
 
 
@@ -33,9 +33,7 @@ class GraphTemporalBlock(nn.Module):
             nn.Dropout(dropout),
         )
         self.residual = (
-            nn.Linear(in_channels, out_channels)
-            if in_channels != out_channels
-            else nn.Identity()
+            nn.Linear(in_channels, out_channels) if in_channels != out_channels else nn.Identity()
         )
 
     def forward(self, x: torch.Tensor, adjacency: torch.Tensor) -> torch.Tensor:

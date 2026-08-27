@@ -2,9 +2,10 @@
 Нормализация landmarks и вычисление biomechanical features (углы),
 используемых repetition detector'ом.
 """
-import numpy as np
 
-from config import LANDMARK_NAMES, COORD_X, COORD_Y, COORD_Z, COORD_VIS
+import numpy as np
+from canonical import COORD_VIS, COORD_X, COORD_Y, COORD_Z
+from config import LANDMARK_NAMES
 
 _IDX = {name: i for i, name in enumerate(LANDMARK_NAMES)}
 
@@ -73,5 +74,10 @@ def average_visibility(frame_landmarks: np.ndarray, names=None) -> float:
 
 
 CRITICAL_KEYPOINTS = [
-    "left_hip", "right_hip", "left_knee", "right_knee", "left_ankle", "right_ankle",
+    "left_hip",
+    "right_hip",
+    "left_knee",
+    "right_knee",
+    "left_ankle",
+    "right_ankle",
 ]

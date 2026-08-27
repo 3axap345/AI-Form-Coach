@@ -1,6 +1,7 @@
 """
 Dataset discovery, labels, and subject-safe splits for canonical squat data.
 """
+
 from __future__ import annotations
 
 import json
@@ -60,9 +61,7 @@ def subject_safe_split(
         raise ValueError(f"Subject leakage between train/test: {sorted(overlap)}")
 
     return {
-        "label_convention": {
-            str(label): name for label, name in sorted(LABEL_TO_NAME.items())
-        },
+        "label_convention": {str(label): name for label, name in sorted(LABEL_TO_NAME.items())},
         "train_subjects": sorted(train_subjects),
         "test_subjects": sorted(test_subjects_found),
         "train": [asdict(record) for record in train],

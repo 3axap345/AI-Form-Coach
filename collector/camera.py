@@ -2,13 +2,13 @@
 Обёртка над cv2.VideoCapture с fallback между backend'ами на Windows
 и автоматическим переподключением при обрыве камеры.
 """
+
 import logging
 import time
 from typing import Optional, Tuple
 
 import cv2
 import numpy as np
-
 from config import Config
 
 logger = logging.getLogger("collector.camera")
@@ -69,9 +69,7 @@ class Camera:
             self._cap = None
 
         for attempt in range(1, self._cfg.reconnect_attempts + 1):
-            logger.warning(
-                "Reconnect attempt %d/%d", attempt, self._cfg.reconnect_attempts
-            )
+            logger.warning("Reconnect attempt %d/%d", attempt, self._cfg.reconnect_attempts)
             time.sleep(self._cfg.reconnect_delay_sec)
             try:
                 self._open()

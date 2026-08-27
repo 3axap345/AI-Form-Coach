@@ -6,10 +6,7 @@ import random
 from pathlib import Path
 
 import numpy as np
-from sklearn import metrics
 import torch
-from torch.utils.data import DataLoader, Dataset
-
 from canonical import (
     CANONICAL_CHANNELS,
     CANONICAL_JOINTS,
@@ -27,8 +24,9 @@ from dataset_split import (
     subject_safe_split,
 )
 from form_model import FormClassifier
+from sklearn import metrics
+from torch.utils.data import DataLoader, Dataset
 from uiprmd_adapter import process_file
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -161,7 +159,9 @@ def train(args) -> dict:
     with (args.output_dir / "training_result.json").open("w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
     with (args.output_dir / "training_config.json").open("w", encoding="utf-8") as f:
-        json.dump(vars(args) | {"device": str(device)}, f, ensure_ascii=False, indent=2, default=str)
+        json.dump(
+            vars(args) | {"device": str(device)}, f, ensure_ascii=False, indent=2, default=str
+        )
     with (args.output_dir / "model_metadata.json").open("w", encoding="utf-8") as f:
         json.dump(
             {

@@ -12,16 +12,16 @@ COLLECTOR_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(COLLECTOR_DIR))
 
 from canonical import (  # noqa: E402
-    Label,
     COORD_Y,
     COORD_Z,
     JOINT_INDEX,
     SEQUENCE_LENGTH,
+    Label,
     canonical_shape,
     parse_uiprmd_filename,
 )
 from config import Config  # noqa: E402
-from dataset_split import discover_uiprmd_txt, subject_safe_split, split_stats  # noqa: E402
+from dataset_split import discover_uiprmd_txt, split_stats, subject_safe_split  # noqa: E402
 from form_analysis import analyze_form, top_detected_issues  # noqa: E402
 from form_inference import FormClassifierInference, ModelLoadError, sha256_file  # noqa: E402
 from form_model import FormClassifier  # noqa: E402
@@ -31,7 +31,6 @@ from uiprmd_adapter import (  # noqa: E402
     load_uiprmd_skeleton_txt,
     process_file,
 )
-
 
 TXT_SAMPLE_NAME = "A01S01E02C01.txt"
 

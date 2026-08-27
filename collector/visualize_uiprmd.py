@@ -1,10 +1,9 @@
 from pathlib import Path
-import numpy as np
+
 import matplotlib.pyplot as plt
-
-from preprocessing import orientation_diagnostics
+import numpy as np
 from canonical import CANONICAL_CONNECTIONS, CANONICAL_JOINTS
-
+from preprocessing import orientation_diagnostics
 
 ROOT = Path(__file__).resolve().parent / "dataset" / "squat_uiprmd"
 
@@ -41,7 +40,6 @@ def draw_frame(frame, title):
 
 
 def main():
-
     files = sorted((ROOT / "correct").glob("*.npy"))
 
     if not files:

@@ -2,13 +2,13 @@
 Проверка качества repetition перед сохранением в датасет.
 Каждая функция возвращает (passed: bool, reason: str), reason пуст если passed.
 """
+
 from dataclasses import dataclass
 from typing import List, Optional
 
 import numpy as np
-
-from config import Config, COORD_VIS
-from landmarks import average_visibility, CRITICAL_KEYPOINTS
+from config import Config
+from landmarks import CRITICAL_KEYPOINTS, average_visibility
 
 
 @dataclass
@@ -35,9 +35,7 @@ def check_quality(
     if total_expected_frames > 0:
         missing_ratio = missing_frame_count / total_expected_frames
         if missing_ratio > cfg.max_missing_frame_ratio:
-            return QualityReport(
-                False, f"too many missing frames ({missing_ratio:.0%})", 0.0
-            )
+            return QualityReport(False, f"too many missing frames ({missing_ratio:.0%})", 0.0)
 
     if len(raw_frames) < 3:
         return QualityReport(False, "incomplete repetition (too few frames)", 0.0)
@@ -63,7 +61,9 @@ def check_quality(
     return QualityReport(True, "", overall_vis)
 
 
-def is_duplicate(new_sample: np.ndarray, last_sample: Optional[np.ndarray], threshold: float = 0.02) -> bool:
+def is_duplicate(
+    new_sample: np.ndarray, last_sample: Optional[np.ndarray], threshold: float = 0.02
+) -> bool:
     """
     Простая проверка на дубликат: среднеквадратичная разница между
     нормализованными sequences. Достаточно для v1 — усложнять до DTW

@@ -7,7 +7,6 @@ from typing import Mapping, Optional
 
 import numpy as np
 import torch
-
 from canonical import LABEL_TO_NAME, canonical_shape
 from form_model import FormClassifier, predict_probabilities
 
@@ -93,8 +92,7 @@ class FormClassifierInference:
         probs = predict_probabilities(self.model, tensor)[0].cpu().numpy()
         label_id = int(np.argmax(probs))
         probabilities = {
-            self.label_to_name.get(i, str(i)): float(probs[i])
-            for i in range(len(probs))
+            self.label_to_name.get(i, str(i)): float(probs[i]) for i in range(len(probs))
         }
         return {
             "label": self.label_to_name.get(label_id, str(label_id)),

@@ -1,6 +1,6 @@
 from pathlib import Path
-import numpy as np
 
+import numpy as np
 from canonical import (
     CANONICAL_JOINTS,
     FOOT_POLICY,
@@ -9,8 +9,7 @@ from canonical import (
     parse_uiprmd_filename,
 )
 from config import Config
-from preprocessing import build_sample, assert_canonical_orientation
-
+from preprocessing import assert_canonical_orientation, build_sample
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -33,9 +32,7 @@ def load_uiprmd_skeleton_txt(path: Path) -> np.ndarray:
         data = data.reshape(1, -1)
 
     if data.shape[1] != 22 * 3:
-        raise ValueError(
-            f"{path.name}: expected 66 columns, got {data.shape[1]}"
-        )
+        raise ValueError(f"{path.name}: expected 66 columns, got {data.shape[1]}")
 
     return data.reshape(data.shape[0], 22, 3)
 
@@ -92,9 +89,7 @@ def process_file(path: Path, cfg: Config) -> np.ndarray:
     frames = load_uiprmd_skeleton(path)
 
     if len(frames) < 2:
-        raise ValueError(
-            f"{path.name}: too few frames ({len(frames)})"
-        )
+        raise ValueError(f"{path.name}: too few frames ({len(frames)})")
 
     sample = build_sample(
         [frames[i] for i in range(len(frames))],
@@ -105,7 +100,6 @@ def process_file(path: Path, cfg: Config) -> np.ndarray:
 
 
 def main():
-
     cfg = Config()
 
     source_root = PROJECT_ROOT / "collector" / "RehabExerAssess-main" / "data" / "UI-PRMD"
@@ -120,7 +114,6 @@ def main():
     }
 
     for label, source_dir in splits.items():
-
         output_dir = output_root / label
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -132,35 +125,23 @@ def main():
         failed = 0
 
         for path in files:
-
             try:
                 sample = process_file(path, cfg)
 
-                output_path = output_dir / (
-                    path.stem + ".npy"
-                )
+                output_path = output_dir / (path.stem + ".npy")
 
                 np.save(output_path, sample)
 
                 success += 1
 
-                print(
-                    f"{path.name}: "
-                    f"{sample.shape} -> {output_path.name}"
-                )
+                print(f"{path.name}: {sample.shape} -> {output_path.name}")
 
             except Exception as e:
-
                 failed += 1
 
-                print(
-                    f"ERROR {path.name}: {e}"
-                )
+                print(f"ERROR {path.name}: {e}")
 
-        print(
-            f"{label}: "
-            f"success={success}, failed={failed}"
-        )
+        print(f"{label}: success={success}, failed={failed}")
 
 
 if __name__ == "__main__":

@@ -8,17 +8,17 @@ STANDING -> DESCENDING -> BOTTOM -> ASCENDING -> STANDING
 одиночном angle-пороге не полагаемся — оба сигнала должны быть согласованы
 на переходах DESCENDING/ASCENDING).
 """
+
 import collections
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum, auto
 from typing import List, Optional
 
 import numpy as np
-
 from config import Config
-from landmarks import knee_angle, hip_vertical_position
+from landmarks import hip_vertical_position, knee_angle
 
 logger = logging.getLogger("collector.repetition")
 
@@ -32,7 +32,7 @@ class Phase(Enum):
 
 @dataclass
 class CompletedRep:
-    frames: List[np.ndarray]      # сырые (ненормализованные) landmark-кадры за весь rep
+    frames: List[np.ndarray]  # сырые (ненормализованные) landmark-кадры за весь rep
     duration_sec: float
     min_knee_angle: float
 
@@ -61,7 +61,9 @@ class RepetitionDetector:
         self._angle_history.append(raw_angle)
         return float(np.mean(self._angle_history))
 
-    def update(self, frame_landmarks: np.ndarray, now: Optional[float] = None) -> Optional[CompletedRep]:
+    def update(
+        self, frame_landmarks: np.ndarray, now: Optional[float] = None
+    ) -> Optional[CompletedRep]:
         """
         Скармливаем один кадр landmarks. Возвращает CompletedRep, если в этом
         кадре только что завершилось полное повторение, иначе None.
@@ -93,7 +95,8 @@ class RepetitionDetector:
             # сработает раньше.
             reached_bottom_threshold = angle < cfg.bottom_knee_angle + cfg.hysteresis
             local_minimum = (
-                self._prev_smoothed_angle is not None and angle > self._prev_smoothed_angle
+                self._prev_smoothed_angle is not None
+                and angle > self._prev_smoothed_angle
                 and self._min_angle_in_rep < cfg.standing_knee_angle - cfg.hysteresis
             )
             if reached_bottom_threshold or local_minimum:
@@ -119,7 +122,9 @@ class RepetitionDetector:
                 )
                 logger.info(
                     "Repetition completed: duration=%.2fs min_angle=%.1f frames=%d",
-                    duration, self._min_angle_in_rep, len(self._rep_buffer),
+                    duration,
+                    self._min_angle_in_rep,
+                    len(self._rep_buffer),
                 )
                 self._phase = Phase.STANDING
                 self._rep_buffer = []

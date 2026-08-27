@@ -4,13 +4,12 @@ Rule-based squat form diagnostics on canonical [60, 12, 4] samples.
 These rules are engineering heuristics for coaching feedback. They are not a
 medical assessment and should be calibrated with real target-camera data.
 """
+
 from __future__ import annotations
 
 import numpy as np
-
 from canonical import COORD_VIS, JOINT_INDEX, canonical_shape
 from config import Config
-
 
 ISSUE_MESSAGES = {
     "knee_valgus": "Knees moving inward",
@@ -88,8 +87,12 @@ def analyze_form(sample: np.ndarray, cfg: Config) -> dict:
     if tuple(sample.shape) != expected:
         raise ValueError(f"expected sample shape {expected}, got {sample.shape}")
 
-    left_knee = _angle(_joint(sample, "left_hip"), _joint(sample, "left_knee"), _joint(sample, "left_ankle"))
-    right_knee = _angle(_joint(sample, "right_hip"), _joint(sample, "right_knee"), _joint(sample, "right_ankle"))
+    left_knee = _angle(
+        _joint(sample, "left_hip"), _joint(sample, "left_knee"), _joint(sample, "left_ankle")
+    )
+    right_knee = _angle(
+        _joint(sample, "right_hip"), _joint(sample, "right_knee"), _joint(sample, "right_ankle")
+    )
     knee_visibility = _visibility(
         sample,
         ["left_hip", "right_hip", "left_knee", "right_knee", "left_ankle", "right_ankle"],
@@ -110,13 +113,17 @@ def analyze_form(sample: np.ndarray, cfg: Config) -> dict:
     mid_shoulder = _midpoint(_joint(sample, "left_shoulder"), _joint(sample, "right_shoulder"))
     torso = mid_shoulder[:, :2] - mid_hip[:, :2]
     torso_angle = np.degrees(np.arctan2(np.abs(torso[:, 0]), np.abs(torso[:, 1]) + 1e-9))
-    torso_visibility = _visibility(sample, ["left_hip", "right_hip", "left_shoulder", "right_shoulder"])
+    torso_visibility = _visibility(
+        sample, ["left_hip", "right_hip", "left_shoulder", "right_shoulder"]
+    )
     torso_bottom = _weighted_mean(torso_angle[bottom], torso_visibility[bottom])
     lean_score = torso_bottom / max(cfg.excessive_forward_lean_angle, 1e-6)
 
     # Valgus: knees narrow relative to foot width at bottom compared to standing.
     knee_width = np.abs(_joint(sample, "left_knee")[:, 0] - _joint(sample, "right_knee")[:, 0])
-    foot_width = np.abs(_joint(sample, "left_foot_index")[:, 0] - _joint(sample, "right_foot_index")[:, 0])
+    foot_width = np.abs(
+        _joint(sample, "left_foot_index")[:, 0] - _joint(sample, "right_foot_index")[:, 0]
+    )
     width_visibility = _visibility(
         sample,
         ["left_knee", "right_knee", "left_foot_index", "right_foot_index"],
@@ -135,7 +142,9 @@ def analyze_form(sample: np.ndarray, cfg: Config) -> dict:
         foot = _joint(sample, f"{side}_foot_index")[:, :2]
         heel_rel_ankle = heel - ankle
         heel_rel_foot = heel - foot
-        baseline = np.mean(np.concatenate([heel_rel_ankle[standing], heel_rel_foot[standing]], axis=0), axis=0)
+        baseline = np.mean(
+            np.concatenate([heel_rel_ankle[standing], heel_rel_foot[standing]], axis=0), axis=0
+        )
         bottom_rel = np.concatenate([heel_rel_ankle[bottom], heel_rel_foot[bottom]], axis=0)
         displacement = np.linalg.norm(bottom_rel - baseline, axis=1)
         side_scores.append(float(np.median(displacement)))

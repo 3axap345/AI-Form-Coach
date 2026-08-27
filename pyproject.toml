@@ -1,0 +1,18 @@
+[project]
+name = "ai-form-coach"
+version = "0.1.0"
+description = "Live squat-form collection and feedback prototype"
+requires-python = ">=3.11,<3.12"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["collector/venv", "UI-PRMD", "collector/RehabExerAssess-main"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

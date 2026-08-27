@@ -2,6 +2,7 @@
 Асинхронное сохранение samples на диск (отдельный поток + очередь), чтобы
 disk I/O никогда не блокировал detection loop. Плюс undo последнего sample.
 """
+
 import json
 import logging
 import queue
@@ -11,7 +12,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-
 from config import Config
 
 logger = logging.getLogger("collector.storage")
@@ -62,7 +62,9 @@ class StorageManager:
     def last_sample_for_class(self, class_name: str) -> Optional[np.ndarray]:
         return self._last_sample_by_class.get(class_name)
 
-    def save_sample(self, class_name: str, sample: np.ndarray, metadata: Dict[str, Any]) -> SaveTask:
+    def save_sample(
+        self, class_name: str, sample: np.ndarray, metadata: Dict[str, Any]
+    ) -> SaveTask:
         class_dir = self._root / class_name
         class_dir.mkdir(parents=True, exist_ok=True)
 

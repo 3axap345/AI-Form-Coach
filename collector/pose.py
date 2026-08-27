@@ -10,6 +10,7 @@
 отдельно скачиваемой моделью — сознательно не усложняем этим v1, как и
 обсуждали. Здесь мы просто прозрачно логируем этот факт.
 """
+
 import logging
 from dataclasses import dataclass
 from typing import Optional
@@ -17,17 +18,16 @@ from typing import Optional
 import cv2
 import mediapipe as mp
 import numpy as np
-
-from config import Config, LANDMARK_INDICES, NUM_LANDMARKS
+from config import LANDMARK_INDICES, NUM_LANDMARKS, Config
 
 logger = logging.getLogger("collector.pose")
 
 
 @dataclass
 class PoseResult:
-    landmarks: np.ndarray          # [NUM_LANDMARKS, 4] -> x, y, z, visibility
-    bbox_area_ratio: float         # доля площади кадра, занятая человеком
-    raw_result: object             # для отрисовки skeleton
+    landmarks: np.ndarray  # [NUM_LANDMARKS, 4] -> x, y, z, visibility
+    bbox_area_ratio: float  # доля площади кадра, занятая человеком
+    raw_result: object  # для отрисовки skeleton
 
 
 class PoseEstimator:

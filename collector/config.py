@@ -2,20 +2,16 @@
 Централизованная конфигурация Data Collector.
 Все пороги и magic numbers живут здесь, чтобы не расползаться по проекту.
 """
-from dataclasses import dataclass
-import cv2
 
+from dataclasses import dataclass
+
+import cv2
 from canonical import (
     CANONICAL_JOINTS,
     MEDIAPIPE_LANDMARK_INDICES,
     NUM_JOINTS,
     SEQUENCE_LENGTH,
-    COORD_X,
-    COORD_Y,
-    COORD_Z,
-    COORD_VIS,
 )
-
 
 # Индексы landmarks в MediaPipe Pose (полный список из 33 точек), которые
 # реально нужны для анализа приседания. Лицо, кисти и прочие точки не
@@ -62,20 +58,20 @@ class Config:
     dataset_root: str = "dataset/squat"
 
     # --- Repetition detection (state machine) ---
-    standing_knee_angle: float = 160.0    # колено выпрямлено => считаем что стоим
-    bottom_knee_angle: float = 100.0      # порог для фиксации нижней точки приседа
-    hysteresis: float = 8.0               # люфт вокруг порогов, чтобы убрать дребезг
-    standing_confirm_frames: int = 5      # столько кадров подряд в STANDING перед новым циклом
+    standing_knee_angle: float = 160.0  # колено выпрямлено => считаем что стоим
+    bottom_knee_angle: float = 100.0  # порог для фиксации нижней точки приседа
+    hysteresis: float = 8.0  # люфт вокруг порогов, чтобы убрать дребезг
+    standing_confirm_frames: int = 5  # столько кадров подряд в STANDING перед новым циклом
     min_rep_duration_sec: float = 0.4
     max_rep_duration_sec: float = 5.0
-    smoothing_window: int = 5             # окно скользящего среднего по углам
+    smoothing_window: int = 5  # окно скользящего среднего по углам
 
     # --- Quality checks ---
     min_avg_visibility: float = 0.6
-    min_keypoint_visibility: float = 0.4      # для критичных точек (колено/таз/лодыжка)
-    max_missing_frame_ratio: float = 0.15     # доля кадров без обнаруженной позы
-    min_bbox_area_ratio: float = 0.05         # человек слишком далеко от камеры
-    max_bbox_area_ratio: float = 0.85         # человек слишком близко к камере
+    min_keypoint_visibility: float = 0.4  # для критичных точек (колено/таз/лодыжка)
+    max_missing_frame_ratio: float = 0.15  # доля кадров без обнаруженной позы
+    min_bbox_area_ratio: float = 0.05  # человек слишком далеко от камеры
+    max_bbox_area_ratio: float = 0.85  # человек слишком близко к камере
 
     # --- Async saving ---
     save_queue_maxsize: int = 32
