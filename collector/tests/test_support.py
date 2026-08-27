@@ -234,11 +234,18 @@ __all__ = [
 ]
 
 
-def completed_squat(test_case: unittest.TestCase, detector: RepetitionDetector) -> list[np.ndarray]:
-    completed: list[np.ndarray] = []
-    for knee_angle in (170, 170, 170, 170, 170, 150, 100, 80, 100, 150, 170, 170, 170, 170, 170):
-        candidate = detector.update(squat_landmark_frame(knee_angle))
-        if candidate is not None:
-            completed.append(candidate)
-    test_case.assertEqual(len(completed), 1)
+def completed_squat(test_case: unittest.TestCase, detector: RepetitionDetector) -> object:
+    """Drive the detector through one deterministic, completed squat."""
+    completed = None
+    for now, knee_x in (
+        (0.0, 0.2),
+        (0.1, 0.2),
+        (0.2, 0.7),
+        (0.3, 1.2),
+        (0.4, 1.2),
+        (0.5, 0.7),
+        (0.6, 0.2),
+    ):
+        completed = detector.update(squat_landmark_frame(knee_x), now=now) or completed
+    test_case.assertIsNotNone(completed)
     return completed

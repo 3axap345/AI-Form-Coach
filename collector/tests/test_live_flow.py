@@ -10,6 +10,7 @@ from test_support import (
     RepetitionDetector,
     StorageManager,
     canonical_shape,
+    completed_squat,
     json,
     np,
     squat_landmark_frame,
@@ -120,7 +121,7 @@ class TestLiveFlow(unittest.TestCase):
             min_rep_duration_sec=0.1,
             min_keypoint_visibility=0.5,
         )
-        completed = self._completed_squat(RepetitionDetector(cfg))
+        completed = completed_squat(self, RepetitionDetector(cfg))
         for frame in completed.frames:
             frame[:, 3] = 0.0
         classifier = FakeClassifier()
