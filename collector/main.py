@@ -75,7 +75,10 @@ def main() -> None:
             try:
                 from form_inference import FormClassifierInference
 
-                classifier = FormClassifierInference(model_path)
+                classifier = FormClassifierInference(
+                    model_path,
+                    expected_sha256=cfg.form_model_sha256,
+                )
                 logger.info("Form classifier loaded: %s", model_path)
             except Exception:
                 logger.exception("Failed to load form classifier; live collection will continue")

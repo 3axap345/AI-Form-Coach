@@ -23,7 +23,7 @@ from canonical import (  # noqa: E402
 from config import Config  # noqa: E402
 from dataset_split import discover_uiprmd_txt, subject_safe_split, split_stats  # noqa: E402
 from form_analysis import analyze_form, top_detected_issues  # noqa: E402
-from form_inference import FormClassifierInference  # noqa: E402
+from form_inference import FormClassifierInference, ModelLoadError, sha256_file  # noqa: E402
 from form_model import FormClassifier  # noqa: E402
 from preprocessing import assert_canonical_orientation  # noqa: E402
 from uiprmd_adapter import (  # noqa: E402
@@ -181,20 +181,36 @@ class PipelineTests(unittest.TestCase):
         model = FormClassifier()
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "model.pt"
-            torch.save(
-                {
-                    "model_state": model.state_dict(),
-                    "label_to_name": {0: "incorrect", 1: "correct"},
-                },
+            torch.save(model.state_dict(), path)
+            inference = FormClassifierInference(
                 path,
+                device="cpu",
+                expected_sha256=sha256_file(path),
             )
-            inference = FormClassifierInference(path, device="cpu")
             sample_path = write_uiprmd_txt_fixture(Path(tmp) / TXT_SAMPLE_NAME)
             sample = process_file(sample_path, Config())
             result = inference.predict(sample)
             self.assertIn(result["label"], {"incorrect", "correct"})
             self.assertIn("confidence", result)
             self.assertIn("probabilities", result)
+
+    def test_inference_rejects_unexpected_state_dict(self):
+        model = FormClassifier()
+        state_dict = model.state_dict()
+        state_dict.pop("head.1.bias")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "model.pt"
+            torch.save(state_dict, path)
+            with self.assertRaisesRegex(ModelLoadError, "keys do not match"):
+                FormClassifierInference(path, device="cpu")
+
+    def test_inference_rejects_wrong_sha256(self):
+        model = FormClassifier()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "model.pt"
+            torch.save(model.state_dict(), path)
+            with self.assertRaisesRegex(ModelLoadError, "SHA-256 mismatch"):
+                FormClassifierInference(path, device="cpu", expected_sha256="0" * 64)
 
     def test_form_analysis_shallow_depth(self):
         sample = synthetic_squat_sample()

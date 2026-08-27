@@ -140,21 +140,9 @@ def train(args) -> dict:
 
         if val_metrics["f1"] > best_f1:
             best_f1 = val_metrics["f1"]
-            torch.save(
-                {
-                    "model_state": model.state_dict(),
-                    "label_to_name": LABEL_TO_NAME,
-                    "canonical": {
-                        "sequence_length": SEQUENCE_LENGTH,
-                        "joints": CANONICAL_JOINTS,
-                        "channels": CANONICAL_CHANNELS,
-                        "coordinate_system": COORDINATE_SYSTEM,
-                        "z_normalization_policy": Z_NORMALIZATION_POLICY,
-                    },
-                    "metrics": val_metrics,
-                },
-                best_model_path,
-            )
+            # The inference artifact intentionally contains weights only.  Keep
+            # labels, canonical-format metadata, and metrics in JSON below.
+            torch.save(model.state_dict(), best_model_path)
 
         print(
             f"epoch={epoch:03d} train_loss={row['train_loss']:.4f} "
@@ -174,6 +162,23 @@ def train(args) -> dict:
         json.dump(result, f, ensure_ascii=False, indent=2)
     with (args.output_dir / "training_config.json").open("w", encoding="utf-8") as f:
         json.dump(vars(args) | {"device": str(device)}, f, ensure_ascii=False, indent=2, default=str)
+    with (args.output_dir / "model_metadata.json").open("w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "label_to_name": LABEL_TO_NAME,
+                "canonical": {
+                    "sequence_length": SEQUENCE_LENGTH,
+                    "joints": CANONICAL_JOINTS,
+                    "channels": CANONICAL_CHANNELS,
+                    "coordinate_system": COORDINATE_SYSTEM,
+                    "z_normalization_policy": Z_NORMALIZATION_POLICY,
+                },
+                "best_f1": best_f1,
+            },
+            f,
+            ensure_ascii=False,
+            indent=2,
+        )
 
     return result
 

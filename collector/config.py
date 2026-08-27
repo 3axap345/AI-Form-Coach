@@ -83,6 +83,7 @@ class Config:
     # --- Model inference ---
     enable_form_inference: bool = True
     form_model_path: str = "models/squat_binary/best_model.pt"
+    form_model_sha256: str | None = None  # optional expected hash for a deployed model
 
     # --- Rule-based form analysis ---
     form_analysis_bottom_window: int = 9
