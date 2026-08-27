@@ -20,5 +20,5 @@ clean:
 	$(PYTHON) -c "from pathlib import Path; import shutil; [shutil.rmtree(path) for path in Path('.').rglob('__pycache__')]; [shutil.rmtree(path) for path in (Path('.pytest_cache'), Path('.ruff_cache')) if path.exists()]; [path.unlink() for path in Path('.').rglob('*.pyc')]"
 
 lock:
-	$(PYTHON) -m piptools compile --generate-hashes --output-file=requirements.txt requirements.in
-	$(PYTHON) -m piptools compile --generate-hashes --output-file=requirements-dev.txt requirements-dev.in
+	$(PYTHON) -m piptools compile --generate-hashes --allow-unsafe --output-file=requirements.txt requirements.in
+	$(PYTHON) -m piptools compile --generate-hashes --allow-unsafe --output-file=requirements-dev.txt requirements-dev.in
