@@ -25,11 +25,15 @@ record, `Z` to undo, `R` to reset counters, and `Q`/`ESC` to quit.
 make setup    # hash-locked development dependencies
 make lint     # Ruff lint + format check
 make test     # full unittest suite
+make coverage # production-code coverage, including missing lines
+make typecheck # mypy baseline for the typed core pipeline
+make build    # deterministic source bundle in dist/
 make format   # apply Ruff fixes/formatting
 make clean    # caches only
 ```
 
-`requirements.in` is the runtime source; `requirements-dev.in` adds tooling.
+`requirements.in` is the runtime source; `requirements-dev.in` adds tooling
+(`pip-tools`, Ruff, coverage, and mypy).
 Their `.txt` counterparts are generated exact-version SHA-256 locks. CI installs
 `requirements-dev.txt` with `--require-hashes`. Edit `.in`, then run `make lock`;
 never hand-edit a generated lock. `Makefile` honours `PYTHON`, e.g.
@@ -47,8 +51,10 @@ set, and calls `strict=True`; it has no unsafe-pickle fallback. Set
 `Config.form_model_sha256` to a 64-character checksum to verify deployed weights.
 
 Models, generated samples, and datasets are excluded from Git. The current release
-artefact is source application plus a separately provisioned model bundle. A
-packaged/Docker release pipeline is intentionally a roadmap TODO.
+artefact is a deterministic, Git-tracked source bundle plus a separately provisioned
+model bundle: `make build` writes `dist/ai-form-coach-<commit>.zip`. The CI `build`
+job verifies and uploads that source artifact. A packaged/Docker release pipeline is
+intentionally a roadmap TODO.
 
 ## Configuration thresholds
 
@@ -105,12 +111,21 @@ Known limitation: make `convert_uiprmd.py` CLI-configurable before use from anot
 checkout. The bundled RehabExerAssess tree is reference code, not a live runtime
 dependency.
 
+The old one-off `aeon` dataset experiment is intentionally not part of the supported
+workflow and has been removed; no application or test dependency on `aeon` remains.
+
 ## CI and merge policy
 
-The single workflow runs `ruff check .`, `ruff format --check .`, and the complete
-unittest suite in separate `lint` and `tests` jobs with pip caching. Errors are not
-suppressed. Actions alone does not prove merges are blocked: configure Branch
-Protection/Rulesets for `main` with required status checks `lint` and `tests`.
+The single workflow has separate `lint`, `tests`, `coverage`, `typecheck`, and
+`build` jobs. The first four install only `requirements-dev.txt` using
+`--require-hashes`; no CI step installs an unpinned package. Coverage excludes test
+files, reports missing lines, and fails below the current production baseline of
+63%. `build` creates and uploads the source bundle. Errors are not suppressed.
+
+This checkout cannot verify repository rules because GitHub CLI/API authentication is
+not available. In GitHub, configure `main` through **Settings → Rules → Rulesets**
+(or Branch protection rules) to require these exact status checks before merging:
+`lint`, `tests`, `coverage`, `typecheck`, and `build`.
 
 ## Architecture
 

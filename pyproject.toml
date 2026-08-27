@@ -16,3 +16,28 @@ select = ["E", "F", "I", "B"]
 quote-style = "double"
 indent-style = "space"
 line-ending = "auto"
+
+[tool.coverage.run]
+source = ["collector"]
+
+[tool.coverage.report]
+omit = ["collector/tests/*"]
+show_missing = true
+fail_under = 63
+
+[tool.mypy]
+python_version = "3.11"
+files = [
+    "collector/canonical.py",
+    "collector/config.py",
+    "collector/landmarks.py",
+    "collector/repetition.py",
+    "collector/quality.py",
+    "collector/preprocessing.py",
+    "collector/form_model.py",
+    "collector/form_inference.py",
+    "collector/form_analysis.py",
+    "collector/live_flow.py",
+]
+ignore_missing_imports = true
+warn_unused_configs = true

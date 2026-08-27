@@ -28,6 +28,9 @@ camera: collector/camera.py
 make setup
 make lint
 make test
+make coverage
+make typecheck
+make build
 make format
 ```
 
@@ -38,7 +41,8 @@ make format
 - Never use unsafe pickle/model loading; inference must remain weights-only.
 - Document every new configuration parameter, including units and tuning effect.
 - Add a regression test for a bugfix where practical.
-- Before finishing, run `make lint` and `make test`.
+- Before finishing, run `make lint` and `make test`; run `make coverage` after
+  business-logic changes and `make typecheck` after changes to the typed core.
 - Do not rewrite broad areas of the application without a concrete need and plan.
 
 ## AI-agent workflow
@@ -48,4 +52,5 @@ make format
 3. Make the smallest coherent change.
 4. Run targeted tests.
 5. Run the full suite.
-6. Update documentation for changed public behaviour/configuration.
+6. Run coverage after business-logic changes and type checking after typed-core changes.
+7. Update documentation for changed public behaviour/configuration.

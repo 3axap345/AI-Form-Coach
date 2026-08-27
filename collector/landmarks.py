@@ -61,7 +61,7 @@ def knee_angle(frame_landmarks: np.ndarray) -> float:
 
 def average_visibility(frame_landmarks: np.ndarray, names=None) -> float:
     if names is None:
-        idxs = range(frame_landmarks.shape[0])
+        idxs = list(range(frame_landmarks.shape[0]))
     else:
         idxs = [_IDX[n] for n in names]
     return float(np.mean([frame_landmarks[i, COORD_VIS] for i in idxs]))

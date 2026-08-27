@@ -39,7 +39,9 @@ class RepetitionDetector:
     def __init__(self, cfg: Config):
         self._cfg = cfg
         self._phase = Phase.STANDING
-        self._angle_history = collections.deque(maxlen=cfg.smoothing_window)
+        self._angle_history: collections.deque[float] = collections.deque(
+            maxlen=cfg.smoothing_window
+        )
         self._standing_streak = 0
         self._rep_buffer: List[np.ndarray] = []
         self._rep_start_time: Optional[float] = None
@@ -108,7 +110,8 @@ class RepetitionDetector:
         elif self._phase == Phase.BOTTOM:
             self._rep_buffer.append(frame_landmarks)
             self._min_angle_in_rep = min(self._min_angle_in_rep, angle)
-            if angle > self._prev_smoothed_angle:
+            previous_angle = self._prev_smoothed_angle
+            if previous_angle is not None and angle > previous_angle:
                 self._phase = Phase.ASCENDING
                 logger.debug("Phase -> ASCENDING (angle=%.1f)", angle)
 
@@ -116,7 +119,10 @@ class RepetitionDetector:
             self._rep_buffer.append(frame_landmarks)
             if angle > cfg.standing_knee_angle - cfg.hysteresis:
                 # Повторение завершено
-                duration = now - self._rep_start_time
+                rep_start_time = self._rep_start_time
+                if rep_start_time is None:
+                    raise RuntimeError("repetition reached ASCENDING without a start time")
+                duration = now - rep_start_time
                 completed = CompletedRep(
                     frames=self._rep_buffer,
                     duration_sec=duration,
