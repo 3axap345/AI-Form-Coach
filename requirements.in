@@ -1,0 +1,12 @@
+# Runtime dependencies for the Python 3.11 application.  Edit this file, then
+# regenerate requirements.txt with `make lock`; do not edit the lock by hand.
+opencv-python==4.10.0.84
+mediapipe==0.10.14
+# MediaPipe 0.10.14 requires protobuf >=4.25.3,<5. 4.25.9 is the newest
+# compatible 4.x release and is not affected by the protobuf advisories that
+# apply to versions before 4.25.8.
+protobuf==4.25.9
+numpy==1.26.4
+torch==2.13.0
+scikit-learn==1.5.1
+matplotlib==3.9.2
