@@ -22,7 +22,6 @@ class Camera:
     def __init__(self, cfg: Config):
         self._cfg = cfg
         self._cap: Optional[cv2.VideoCapture] = None
-        self._active_backend: Optional[int] = None
         self._open()
 
     def _open(self) -> None:
@@ -40,7 +39,6 @@ class Camera:
                 ok, _ = cap.read()
                 if ok:
                     self._cap = cap
-                    self._active_backend = backend
                     logger.info("Camera opened with backend=%s", backend)
                     return
                 cap.release()

@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Iterable, Tuple
+from typing import Dict, Tuple
 
 SEQUENCE_LENGTH = 60
 
@@ -52,7 +52,6 @@ COORD_VIS = CHANNEL_INDEX["visibility"]
 
 COORDINATE_SYSTEM = "body_centered_image_y_down"
 Z_NORMALIZATION_POLICY = "mid_hip_relative_torso_scale"
-SCALE_POLICY = "first_frame_mid_shoulder_to_mid_hip_xy"
 
 CANONICAL_CONNECTIONS: Tuple[Tuple[int, int], ...] = (
     (0, 1),
@@ -84,32 +83,6 @@ MEDIAPIPE_LANDMARK_INDICES: Dict[str, int] = {
     "left_foot_index": 31,
     "right_foot_index": 32,
 }
-
-# UI-PRMD Kinect 22-joint order used by RehabExerAssess connectivity.
-UIPRMD_JOINTS: Tuple[str, ...] = (
-    "root",
-    "lower_spine",
-    "upper_spine",
-    "neck",
-    "head",
-    "head_top",
-    "left_shoulder",
-    "left_elbow",
-    "left_wrist",
-    "left_hand",
-    "right_shoulder",
-    "right_elbow",
-    "right_wrist",
-    "right_hand",
-    "left_hip",
-    "left_knee",
-    "left_ankle",
-    "left_foot",
-    "right_hip",
-    "right_knee",
-    "right_ankle",
-    "right_foot",
-)
 
 UIPRMD_TO_CANONICAL: Dict[str, int] = {
     "left_shoulder": 6,
@@ -185,9 +158,3 @@ def parse_uiprmd_filename(path: str | Path) -> UIPRMDMetadata:
 
 def canonical_shape(sequence_length: int = SEQUENCE_LENGTH) -> Tuple[int, int, int]:
     return sequence_length, NUM_JOINTS, NUM_CHANNELS
-
-
-def validate_joint_names(names: Iterable[str]) -> None:
-    unknown = [name for name in names if name not in JOINT_INDEX]
-    if unknown:
-        raise ValueError(f"Unknown canonical joint names: {unknown}")
